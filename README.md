@@ -42,3 +42,44 @@ var listener = app.listen(process.env.PORT || 3000, function() {
   console.log('FastBoot running at http://' + host + ":" + port);
 });
 ```
+
+#### Providing Index Document Programmatically
+
+You may not store `index.html` with the fastboot build, perhaps it's
+stored on an external server, or want to preload the document with additional
+information such as i18n translations.  To do this, first, omit `htmlFile` from the options hash
+that is provided to the `FastBootServer` constructor.
+
+Next, register a middleware _before_ `server.middleware`, retrieve your index file,
+or read it from disk and manipulate the content.  Finally, set the final value to `res.locals.fastbootHTML`.
+
+```js
+var fetchIndex = require('node-ember-cli-deploy-redis/fetch');
+
+var server = new FastBootServer({
+  distPath: 'path/to/fastboot-dist'
+});
+
+var app = express();
+
+app.use(function(req, res, next) {
+  fetchIndex(req, 'myapp:index', {
+    host: 'redis.example.org',
+    port: 6929,
+    password: 'passw0rd!',
+    db: 0
+  }).then(function(indexHtml) {
+    res.locals.fastbootHTML = indexHtml;
+    next();
+  }).catch(next);
+});
+
+app.get('/*', server.middleware());
+
+var listener = app.listen(process.env.PORT || 3000, function() {
+  var host = listener.address().address;
+  var port = listener.address().port;
+
+  console.log('FastBoot running at http://' + host + ":" + port);
+});
+```
