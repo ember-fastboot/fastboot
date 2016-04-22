@@ -131,6 +131,7 @@ describe("bin/ember-fastboot", function() {
     var tmpPath = temp.path({ suffix: '-fastboot-server-test' });
     var server = new Server({
       path: tmpPath,
+      // verbose: true,
       args: ['--watch']
     });
 
@@ -145,6 +146,15 @@ describe("bin/ember-fastboot", function() {
           })
           .then(function() {
             return fsp.copy(fixturePath('hot-swap-app'), tmpPath);
+          })
+          .then(function() {
+            return new RSVP.Promise(function(resolve) {
+              server.stdout.on('data', function(data) {
+                if (data.toString().match('Reloading Ember app')) {
+                  resolve();
+                }
+              });
+            });
           })
           .then(function() {
             return request('http://localhost:3000');

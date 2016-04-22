@@ -10,6 +10,9 @@ var expressCluster = require('express-cluster');
 var cluster = require('cluster');
 var parseArgs = require('minimist');
 
+var FastBootWatcher = require('../lib/watcher');
+var debounce = require('lodash.debounce');
+
 var argOptions = {
   default: { port: 3000, host: '::' }
 };
@@ -17,6 +20,7 @@ var argOptions = {
 var options = parseArgs(process.argv.slice(2), argOptions);
 var distPath = options._[0];
 var assetPath = options['serve-assets-from'];
+var enableWatcher = options['watch'];
 
 if (!distPath) {
   console.error("You must call ember-fastboot with the path of a fastboot-dist directory:\n\n" +
@@ -74,20 +78,36 @@ server.app.buildApp().then(function() {
   process.exit(1);
 });
 
+var reloadCluster = function() {
+  console.log('Reloading Ember app from ' + distPath);
+
+  server.reload();
+
+  for (var id in cluster.workers) {
+    cluster.workers[id].send({ event: 'fastboot-reload' });
+  }
+};
+
 if (cluster.isMaster) {
-  process.on('SIGUSR1', function() {
-    console.log('Reloading Ember app from ' + distPath);
-
-    server.reload();
-
-    for (var id in cluster.workers) {
-      cluster.workers[id].send({ event: 'fastboot-reload' });
-    }
-  });
+  process.on('SIGUSR1', reloadCluster);
 } else {
   process.on('message', function(message) {
     if (message.event === 'fastboot-reload') {
       server.reload();
     }
   });
+}
+
+if (enableWatcher && cluster.isMaster) {
+  var scheduleReload = debounce(function() {
+    reloadCluster();
+  }, 100);
+
+  var watcher = new FastBootWatcher({
+    watchedDir: distPath
+  });
+
+  watcher.on('change', scheduleReload);
+  watcher.on('add', scheduleReload);
+  watcher.on('delete', scheduleReload);
 }
