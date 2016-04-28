@@ -13,6 +13,7 @@ function Server(fixture, options) {
 
   this.path = options.path || fixturePath(fixture);
   this.args = [this.path];
+  this.verbose = options.verbose;
 
   if (options.args) {
     this.args = this.args.concat(options.args);
@@ -21,9 +22,19 @@ function Server(fixture, options) {
 
 Server.prototype.start = function() {
   var server = this.server = childProcess.spawn(binPath, this.args);
+  var verbose = this.verbose;
 
   this.stdout = server.stdout;
   this.stdin = server.stdin;
+
+  if (verbose) {
+    server.stdout.on('data', function(data) {
+      console.log(data.toString());
+    });
+    server.stderr.on('data', function(data) {
+      console.error(data.toString());
+    });
+  }
 
   return new RSVP.Promise(function(resolve, reject) {
 

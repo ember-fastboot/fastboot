@@ -95,34 +95,76 @@ describe("bin/ember-fastboot", function() {
     var tmpPath = temp.path({ suffix: '-fastboot-server-test' });
     var server = new Server({ path: tmpPath });
 
-    after(function() {
-      server.stop();
+    return expect(fsp.copy(fixturePath('basic-app'), tmpPath)).to.be.fulfilled
+      .then(function() {
+        return server.start()
+          .then(function() {
+            return request('http://localhost:3000');
+          })
+          .then(function(html) {
+            expect(html).to.match(/<h2 id="title">Welcome to Ember<\/h2>/);
+          })
+          .then(function() {
+            return fsp.remove(tmpPath);
+          })
+          .then(function() {
+            return fsp.copy(fixturePath('hot-swap-app'), tmpPath);
+          })
+          .then(function() {
+            return server.reload();
+          })
+          .then(function() {
+            return request('http://localhost:3000');
+          })
+          .then(function(html) {
+            expect(html).to.match(/<h2 id="title">Goodbye from Ember<\/h2>/);
+          })
+          .finally(function() {
+            server.stop();
+          });
+      });
+  });
+
+  it("reloads on file changes if the --watch option is provided", function() {
+    this.timeout(7000);
+
+    var tmpPath = temp.path({ suffix: '-fastboot-server-test' });
+    var server = new Server({
+      path: tmpPath,
+      // verbose: true,
+      args: ['--watch']
     });
 
     return expect(fsp.copy(fixturePath('basic-app'), tmpPath)).to.be.fulfilled
       .then(function() {
-        return server.start();
-      })
-      .then(function() {
-        return request('http://localhost:3000');
-      })
-      .then(function(html) {
-        expect(html).to.match(/<h2 id="title">Welcome to Ember<\/h2>/);
-      })
-      .then(function() {
-        return fsp.remove(tmpPath);
-      })
-      .then(function() {
-        return fsp.copy(fixturePath('hot-swap-app'), tmpPath);
-      })
-      .then(function() {
-        return server.reload();
-      })
-      .then(function() {
-        return request('http://localhost:3000');
-      })
-      .then(function(html) {
-        expect(html).to.match(/<h2 id="title">Goodbye from Ember<\/h2>/);
+        return server.start()
+          .then(function() {
+            return request('http://localhost:3000');
+          })
+          .then(function(html) {
+            expect(html).to.match(/<h2 id="title">Welcome to Ember<\/h2>/);
+          })
+          .then(function() {
+            return fsp.copy(fixturePath('hot-swap-app'), tmpPath);
+          })
+          .then(function() {
+            return new RSVP.Promise(function(resolve) {
+              server.stdout.on('data', function(data) {
+                if (data.toString().match('Reloading Ember app')) {
+                  resolve();
+                }
+              });
+            });
+          })
+          .then(function() {
+            return request('http://localhost:3000');
+          })
+          .then(function(html) {
+            expect(html).to.match(/<h2 id="title">Goodbye from Ember<\/h2>/);
+          })
+          .finally(function() {
+            server.stop();
+          });
       });
   });
 });

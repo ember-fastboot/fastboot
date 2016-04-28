@@ -31,9 +31,11 @@
     "express": "^4.13.3",
     "express-cluster": "0.0.4",
     "glob": "^4.0.5",
+    "lodash.debounce": "^4.0.6",
     "minimist": "^1.2.0",
     "najax": "^0.4.0",
     "rsvp": "^3.0.16",
+    "sane": "^1.1.1",
     "simple-dom": "^0.3.0",
     "source-map-support": "^0.4.0"
   },
