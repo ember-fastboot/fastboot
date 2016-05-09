@@ -31,5 +31,8 @@ describe("FastBootInfo", function() {
   it("has a FastBootResponse", function() {
     expect(fastbootInfo.response).to.be.an.instanceOf(FastBootResponse);
   });
-});
 
+  it("has an ENV", function() {
+    expect(fastbootInfo.ENV).to.be.an('object');
+  });
+});
