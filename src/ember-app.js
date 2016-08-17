@@ -311,7 +311,7 @@ function createShoebox(doc, fastbootInfo) {
 
     let value = shoebox[key];
     let textValue = JSON.stringify(value);
-    textValue = textValue.replace(/<\/(script)/i, '<\\/$1');
+    textValue = textValue.replace(/<\/(script[ />])/i, '<\\/$1');
 
     let scriptText = doc.createRawHTMLSection(textValue);
     let scriptEl = doc.createElement('script');
