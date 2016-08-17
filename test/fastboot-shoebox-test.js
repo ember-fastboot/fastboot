@@ -25,7 +25,7 @@ describe("FastBootShoebox", function() {
         expect(html).to.match(/<script type="fastboot\/shoebox" id="shoebox-key3">{"htmlSpecialCase":"R&B > Jazz"}<\/script>/);
 
         // "</script" is escaped as "<\/script" (valid in JSON)
-        expect(html).to.match(/<script type="fastboot\/shoebox" id="shoebox-key4">{"nastyScriptCase":"1337 hackz0rz RULe <\\\/script d00d>"}<\/script>/);
+        expect(html).to.match(/<script type="fastboot\/shoebox" id="shoebox-key4">{"nastyScriptCase":"1337 hackz0rz RULe <\\\/ScRiPt d00d>"}<\/script>/);
       });
   });
 

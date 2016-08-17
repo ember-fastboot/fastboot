@@ -298,7 +298,7 @@ define('fastboot-test/routes/application', ['exports', 'ember'], function (expor
         shoebox.put('key1', { foo: 'bar' });
         shoebox.put('key2', { zip: 'zap' });
         shoebox.put('key3', { htmlSpecialCase: 'R&B > Jazz' });
-        shoebox.put('key4', { nastyScriptCase: '1337 hackz0rz RULe </script d00d>' });
+        shoebox.put('key4', { nastyScriptCase: '1337 hackz0rz RULe </ScRiPt d00d>' });
       }
     }
   });
