@@ -310,7 +310,10 @@ function createShoebox(doc, fastbootInfo) {
     if (!shoebox.hasOwnProperty(key)) { continue; }
 
     let value = shoebox[key];
-    let scriptText = doc.createRawHTMLSection(JSON.stringify(value));
+    let textValue = JSON.stringify(value);
+    textValue = textValue.replace('</script', '<\\/script');
+
+    let scriptText = doc.createRawHTMLSection(textValue);
     let scriptEl = doc.createElement('script');
 
     scriptEl.setAttribute('type', 'fastboot/shoebox');
