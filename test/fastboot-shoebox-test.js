@@ -20,6 +20,7 @@ describe("FastBootShoebox", function() {
       .then(html => {
         expect(html).to.match(/<script type="fastboot\/shoebox" id="shoebox-key1">{"foo":"bar"}<\/script>/);
         expect(html).to.match(/<script type="fastboot\/shoebox" id="shoebox-key2">{"zip":"zap"}<\/script>/);
+        expect(html).to.match(/<script type="fastboot\/shoebox" id="shoebox-key3">{"htmlSpecialCase":"R&B > Jazz"}<\/script>/);
       });
   });
 
