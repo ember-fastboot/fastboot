@@ -5,7 +5,14 @@ function FastBootHeaders(headers) {
   this.headers = {};
 
   for (var header in headers) {
-    this.headers[header] = headers[header].split(', ');
+    let value = headers[header];
+
+    // convert to array if not already
+    if (typeof value === 'string') {
+      value = value.split(', ');
+    }
+
+    this.headers[header] = value;
   }
 }
 
