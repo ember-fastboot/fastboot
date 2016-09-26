@@ -68,6 +68,15 @@ describe('FastBootHeaders', function() {
     expect(headers.has('host')).to.be.false;
   });
 
+  it('handles header values that are already an array', function() {
+    var headers = {
+      'x-test-header': ['value1', 'value2']
+    };
+    headers = new FastBootHeaders(headers);
+
+    expect(headers.getAll('x-test-header')).to.deep.equal(['value1', 'value2']);
+  });
+
   it('appends entries onto a header, regardless of casing', function() {
     var headers = new FastBootHeaders();
 
@@ -149,4 +158,3 @@ describe('FastBootHeaders', function() {
     expect(entriesIterator.next()).to.deep.equal({ value: undefined, done: true });
   });
 });
-
