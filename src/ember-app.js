@@ -196,10 +196,11 @@ class EmberApp {
   visit(path, options) {
     let req = options.request;
     let res = options.response;
+    let shoebox = options.shoebox;
     let html = options.html || this.html;
 
     let bootOptions = buildBootOptions();
-    let fastbootInfo = new FastBootInfo(req, res, this.hostWhitelist);
+    let fastbootInfo = new FastBootInfo(req, res, shoebox, this.hostWhitelist);
     let doc = bootOptions.document;
 
     let instance;
