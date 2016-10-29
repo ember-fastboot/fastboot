@@ -212,6 +212,34 @@ class EmberApp {
   /**
    * @private
    *
+   * Creates a destroy function to destroy the created `ApplicationInstance`.
+   *
+   * @param {Object} The Result object that contains the application instance to be destroyed.
+   * @param {Integer} How long to wait before manually destroying the application instance. Ignored if its value is 0.
+   *
+   * @returns {Function} The destructor function.
+   */
+  destroyAppInstance(result, timeout) {
+    const instance = result.instance;
+
+    if (!timeout) return () => instance.destroy();
+
+    // start a timer to destroy the appInstance forcefully in the given ms.
+    // This is a failure mechanism so that node process doesn't get wedged if the `visit` never completes.
+    const destructionTimer = setTimeout(function() {
+      instance.destroy();
+      result.error = new Error(`App instance was forcefully destroyed in ${timeout}ms`);
+    }, timeout);
+
+    return () => {
+      clearTimeout(destructionTimer);
+      instance.destroy();
+    };
+  }
+
+  /**
+   * @private
+   *
    * Main funtion that creates the app instance for every `visit` request, boots
    * the app instance and then visits the given route and destroys the app instance
    * when the route is finished its render cycle.
@@ -221,25 +249,22 @@ class EmberApp {
    * @param {Object} bootOptions An object containing the boot options that are used by
    *                             by ember to decide whether it needs to do rendering or not.
    * @param {Object} result
+   * @param {Integer} How long to wait before manually destroying the application instance. Ignored if its value is 0.
+   *
    * @return {Promise<instance>} instance
    */
-  visitRoute(path, fastbootInfo, bootOptions, result) {
-    let instance;
-
+  visitRoute(path, fastbootInfo, bootOptions, result, destroyAppInstanceInMs) {
     return this.buildAppInstance()
       .then(appInstance => {
-        instance = appInstance;
-        result.instance = instance;
-        registerFastBootInfo(fastbootInfo, instance);
-
-        return instance.boot(bootOptions);
+        result.instance = appInstance;
+        registerFastBootInfo(fastbootInfo, appInstance);
+        result.destroyInstance = this.destroyAppInstance(result, destroyAppInstanceInMs);
+        return appInstance.boot(bootOptions);
       })
       .then(() => result.instanceBooted = true)
-      .then(() => instance.visit(path, bootOptions))
-      .then(() => waitForApp(instance))
-      .then(() => {
-        return instance;
-      });
+      .then(() => result.instance.visit(path, bootOptions))
+      .then(() => waitForApp(result.instance))
+      .then(() => result.instance);
   }
 
   /**
@@ -269,7 +294,7 @@ class EmberApp {
     let res = options.response;
     let html = options.html || this.html;
     let disableShoebox = options.disableShoebox || false;
-    let destroyAppInstanceInMs = options.destroyAppInstanceInMs;
+    let destroyAppInstanceInMs = parseInt(options.destroyAppInstanceInMs, 10) || 0;
 
     let shouldRender = (options.shouldRender !== undefined) ? options.shouldRender : true;
     let bootOptions = buildBootOptions(shouldRender);
@@ -287,42 +312,20 @@ class EmberApp {
       fastbootInfo: fastbootInfo
     });
 
-    let destroyAppInstanceTimer;
-    if (parseInt(destroyAppInstanceInMs, 10) > 0) {
-      // start a timer to destroy the appInstance forcefully in the given ms.
-      // This is a failure mechanism so that node process doesn't get wedged if the `visit` never completes.
-      destroyAppInstanceTimer = setTimeout(function() {
-        if (instance && !result.instanceDestroyed) {
-          result.instanceDestroyed = true;
-          result.error = new Error('App instance was forcefully destroyed in ' + destroyAppInstanceInMs + 'ms');
-          instance.destroy();
-        }
-      }, destroyAppInstanceInMs);
-    }
 
-    let instance;
-    return this.visitRoute(path, fastbootInfo, bootOptions, result)
-      .then(appInstance => {
-        instance = appInstance;
-      })
+    return this.visitRoute(path, fastbootInfo, bootOptions, result, destroyAppInstanceInMs)
+      .then(() => result.instanceBooted = true)
+      .then(() => result.instance.visit(path, bootOptions))
+      .then(() => waitForApp(result.instance))
       .then(() => {
         if (!disableShoebox) {
           // if shoebox is not disabled, then create the shoebox and send API data
           createShoebox(doc, fastbootInfo);
         }
       })
-      .catch(error => result.error = error)
+      .catch(error => result.error = result.error || error)
       .then(() => result._finalize())
-      .finally(() => {
-        if (instance && !result.instanceDestroyed) {
-          result.instanceDestroyed = true;
-          instance.destroy();
-
-          if (destroyAppInstanceTimer) {
-            clearTimeout(destroyAppInstanceTimer);
-          }
-        }
-      });
+      .finally(() => result.destroyInstance());
   }
 
   /**
