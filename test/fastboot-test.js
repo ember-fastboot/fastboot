@@ -81,7 +81,7 @@ describe("FastBoot", function() {
 
   it("can forcefully destroy the app instance using destroyAppInstanceInMs", function() {
     var fastboot = new FastBoot({
-      distPath: fixture('basic-app')
+      distPath: fixture('slow-app')
     });
 
     return fastboot.visit('/', {
