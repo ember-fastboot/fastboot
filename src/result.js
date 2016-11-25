@@ -66,14 +66,13 @@ class Result {
    * gathered from the completed application instance and statically copied
    * to this Result instance.
    */
-  _finalize() {
+  _finalize(instance) {
     if (this.finalized) {
       throw new Error("Results cannot be finalized more than once");
     }
 
     // Grab some metadata from the sandboxed application instance
     // and copy it to this Result object.
-    let instance = this.instance;
     if (instance) {
       this._finalizeMetadata(instance);
     }
