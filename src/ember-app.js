@@ -32,7 +32,7 @@ class EmberApp {
     let distPath = path.resolve(options.distPath);
     let config = this.readPackageJSON(distPath);
 
-    this.appFilePath = config.appFile;
+    this.appFilesPath = config.appFiles;
     this.vendorFilePath = config.vendorFile;
     this.moduleWhitelist = config.moduleWhitelist;
     this.hostWhitelist = config.hostWhitelist;
@@ -128,21 +128,23 @@ class EmberApp {
   */
   loadAppFiles() {
     let sandbox = this.sandbox;
-    let appFilePath = this.appFilePath;
+    let appFilesPath = this.appFilesPath;
     let vendorFilePath = this.vendorFilePath;
 
     sandbox.eval('sourceMapSupport.install(Error);');
 
-    let appFile = fs.readFileSync(appFilePath, 'utf8');
     let vendorFile = fs.readFileSync(vendorFilePath, 'utf8');
 
-    debug("evaluating app; app=%s; vendor=%s", appFilePath, vendorFilePath);
+    debug("evaluating app; app=%s; vendor=%s", appFilesPath, vendorFilePath);
 
     sandbox.eval(vendorFile, vendorFilePath);
     debug("vendor file evaluated");
 
-    sandbox.eval(appFile, appFilePath);
-    debug("app file evaluated");
+    appFilesPath.forEach(function(appFilePath) {
+      let appFile = fs.readFileSync(appFilePath, 'utf8');
+      sandbox.eval(appFile, appFilePath);
+    });
+    debug("app files evaluated");
   }
 
   /**
@@ -153,7 +155,6 @@ class EmberApp {
    */
   createEmberApp() {
     let sandbox = this.sandbox;
-    let appFilePath = this.appFilePath;
 
     // Retrieve the application factory from within the sandbox
     let AppFactory = sandbox.run(function(ctx) {
@@ -162,7 +163,7 @@ class EmberApp {
 
     // If the application factory couldn't be found, throw an error
     if (!AppFactory || typeof AppFactory['default'] !== 'function') {
-      throw new Error('Failed to load Ember app from ' + appFilePath + ', make sure it was built for FastBoot with the `ember fastboot:build` command.');
+      throw new Error('Failed to load Ember app from app.js, make sure it was built for FastBoot with the `ember fastboot:build` command.');
     }
 
     // Otherwise, return a new `Ember.Application` instance
@@ -349,8 +350,13 @@ class EmberApp {
       throw new Error(`${pkgPath} was malformed or did not contain a manifest. Ensure that you have a compatible version of ember-cli-fastboot.`);
     }
 
+    var appFiles = [];
+    manifest.appFiles.forEach(function(appFile) {
+      appFiles.push(path.join(distPath, appFile));
+    });
+
     return {
-      appFile:  path.join(distPath, manifest.appFile),
+      appFiles:  appFiles,
       vendorFile: path.join(distPath, manifest.vendorFile),
       htmlFile: path.join(distPath, manifest.htmlFile),
       moduleWhitelist: pkg.fastboot.moduleWhitelist,
