@@ -3,6 +3,8 @@
 const SimpleDOM = require('simple-dom');
 const HTMLSerializer = new SimpleDOM.HTMLSerializer(SimpleDOM.voidMap);
 
+const chalk = require('chalk');
+
 /**
  * Represents the rendered result of visiting an Ember app at a particular URL.
  * A `Result` object is returned from calling {@link FastBoot}'s `visit()`
@@ -113,10 +115,20 @@ class Result {
 }
 
 function insertIntoIndexHTML(html, head, body) {
-  html = html.replace("<!-- EMBER_CLI_FASTBOOT_BODY -->", body);
+  const headComment = "<!-- EMBER_CLI_FASTBOOT_HEAD -->";
+  const bodyComment = "<!-- EMBER_CLI_FASTBOOT_BODY -->";
+
+  const warnMissing = missing => {
+    throw new Error(`Fastboot was not able to find ${missing} in base HTML`);
+  }
+
+  if (html.indexOf(bodyComment) === -1) { warnMissing(bodyComment); }
+  if (html.indexOf(headComment) === -1) { warnMissing(headComment); }
+
+  html = html.replace(bodyComment, body);
 
   if (head) {
-    html = html.replace("<!-- EMBER_CLI_FASTBOOT_HEAD -->", head);
+    html = html.replace(headComment, head);
   }
 
   return html;
