@@ -1,4 +1,6 @@
-var chai = require("chai");
-var chaiAsPromised = require("chai-as-promised");
+'use strict';
+
+let chai = require('chai');
+let chaiAsPromised = require('chai-as-promised');
 
 chai.use(chaiAsPromised);

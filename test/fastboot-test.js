@@ -1,26 +1,26 @@
 'use strict';
 
 const expect = require('chai').expect;
-const fs = require('fs');
 const path = require('path');
+const fs = require('fs');
 const fixture = require('./helpers/fixture-path');
 const FastBoot = require('./../src/index');
 const CustomSandbox = require('./fixtures/custom-sandbox/custom-sandbox');
 
-describe("FastBoot", function() {
-  it("throws an exception if no distPath is provided", function() {
-    var fn = function() {
+describe('FastBoot', function() {
+  it('throws an exception if no distPath is provided', function() {
+    let fn = function() {
       return new FastBoot();
     };
 
     expect(fn).to.throw(/You must instantiate FastBoot with a distPath option/);
   });
 
-  it("throws an exception if no package.json exists in the provided distPath", function() {
-    var distPath = fixture('no-package-json');
-    var fn = function() {
+  it('throws an exception if no package.json exists in the provided distPath', function() {
+    let distPath = fixture('no-package-json');
+    let fn = function() {
       return new FastBoot({
-        distPath: distPath
+        distPath,
       });
     };
 
@@ -28,30 +28,30 @@ describe("FastBoot", function() {
   });
 
   it('throws an error when manifest schema version is higher than fastboot schema version', function() {
-    var distPath = fixture('higher-schema-version');
-    var fn = function() {
+    let distPath = fixture('higher-schema-version');
+    let fn = function() {
       return new FastBoot({
-        distPath: distPath
+        distPath,
       });
     };
 
     expect(fn).to.throw(/An incompatible version between `ember-cli-fastboot` and `fastboot` was found/);
   });
 
-  it("doesn't throw an exception if a package.json is provided", function() {
-    var distPath = fixture('empty-package-json');
-    var fn = function() {
+  it('doesn\'t throw an exception if a package.json is provided', function() {
+    let distPath = fixture('empty-package-json');
+    let fn = function() {
       return new FastBoot({
-        distPath: distPath
+        distPath,
       });
     };
 
     expect(fn).to.throw(/(.+)\/fixtures\/empty-package-json\/package.json was malformed or did not contain a manifest/);
   });
 
-  it("can render HTML", function() {
-    var fastboot = new FastBoot({
-      distPath: fixture('basic-app')
+  it('can render HTML', function() {
+    let fastboot = new FastBoot({
+      distPath: fixture('basic-app'),
     });
 
     return fastboot.visit('/')
@@ -61,9 +61,9 @@ describe("FastBoot", function() {
       });
   });
 
-  it("can render HTML with array of app files defined in package.json", function() {
-    var fastboot = new FastBoot({
-      distPath: fixture('multiple-app-files')
+  it('can render HTML with array of app files defined in package.json', function() {
+    let fastboot = new FastBoot({
+      distPath: fixture('multiple-app-files'),
     });
 
     return fastboot.visit('/')
@@ -73,13 +73,13 @@ describe("FastBoot", function() {
       });
   });
 
-  it("cannot not render app HTML with shouldRender set as false", function() {
-    var fastboot = new FastBoot({
-      distPath: fixture('basic-app')
+  it('cannot not render app HTML with shouldRender set as false', function() {
+    let fastboot = new FastBoot({
+      distPath: fixture('basic-app'),
     });
 
     return fastboot.visit('/', {
-      shouldRender: false
+      shouldRender: false,
     })
       .then(r => r.html())
       .then(html => {
@@ -87,13 +87,13 @@ describe("FastBoot", function() {
       });
   });
 
-  it("can serialize the head and body", function() {
-    var fastboot = new FastBoot({
-      distPath: fixture('basic-app')
+  it('can serialize the head and body', function() {
+    let fastboot = new FastBoot({
+      distPath: fixture('basic-app'),
     });
 
     return fastboot.visit('/')
-      .then((r) => {
+      .then(r => {
         let contents = r.domContents();
 
         expect(contents.head).to.equal('');
@@ -101,27 +101,27 @@ describe("FastBoot", function() {
       });
   });
 
-  it("can forcefully destroy the app instance using destroyAppInstanceInMs", function() {
-    var fastboot = new FastBoot({
-      distPath: fixture('basic-app')
+  it('can forcefully destroy the app instance using destroyAppInstanceInMs', function() {
+    let fastboot = new FastBoot({
+      distPath: fixture('basic-app'),
     });
 
     return fastboot.visit('/', {
-      destroyAppInstanceInMs: 5
+      destroyAppInstanceInMs: 5,
     })
-      .catch((e) => {
+      .catch(e => {
         expect(e.message).to.equal('App instance was forcefully destroyed in 5ms');
       });
   });
 
-  it("can render HTML when sandboxGlobals is provided", function() {
-    var fastboot = new FastBoot({
+  it('can render HTML when sandboxGlobals is provided', function() {
+    let fastboot = new FastBoot({
       distPath: fixture('custom-sandbox'),
       sandboxGlobals: {
         foo: 5,
         najax: 'undefined',
-        myVar: 'undefined'
-      }
+        myVar: 'undefined',
+      },
     });
 
     return fastboot.visit('/foo')
@@ -132,15 +132,15 @@ describe("FastBoot", function() {
       });
   });
 
-  it("can render HTML when sandbox class is provided", function() {
-    var fastboot = new FastBoot({
+  it('can render HTML when sandbox class is provided', function() {
+    let fastboot = new FastBoot({
       distPath: fixture('custom-sandbox'),
       sandboxClass: CustomSandbox,
       sandboxGlobals: {
         myVar: 2,
         foo: 'undefined',
-        najax: 'undefined'
-      }
+        najax: 'undefined',
+      },
     });
 
     return fastboot.visit('/foo')
@@ -150,29 +150,27 @@ describe("FastBoot", function() {
       });
   });
 
-  it("rejects the promise if an error occurs", function() {
-    var fastboot = new FastBoot({
-      distPath: fixture('rejected-promise')
+  it('rejects the promise if an error occurs', function() {
+    let fastboot = new FastBoot({
+      distPath: fixture('rejected-promise'),
     });
 
     return expect(fastboot.visit('/')).to.be.rejected;
   });
 
-  it("catches the error if an error occurs", function() {
-    var fastboot = new FastBoot({
-      distPath: fixture('rejected-promise')
+  it('catches the error if an error occurs', function() {
+    let fastboot = new FastBoot({
+      distPath: fixture('rejected-promise'),
     });
 
     fastboot.visit('/')
-      .catch(function(err) {
-        return expect(err).to.be.not.null;
-      });
+      .catch(err => expect(err).to.be.not.null);
   });
 
-  it("renders an empty page if the resilient flag is set", function() {
-    var fastboot = new FastBoot({
+  it('renders an empty page if the resilient flag is set', function() {
+    let fastboot = new FastBoot({
       distPath: fixture('rejected-promise'),
-      resilient: true
+      resilient: true,
     });
 
     return fastboot.visit('/')
@@ -182,9 +180,9 @@ describe("FastBoot", function() {
       });
   });
 
-  it("can reload the distPath", function() {
-    var fastboot = new FastBoot({
-      distPath: fixture('basic-app')
+  it('can reload the distPath', function() {
+    let fastboot = new FastBoot({
+      distPath: fixture('basic-app'),
     });
 
     return fastboot.visit('/')
@@ -197,19 +195,19 @@ describe("FastBoot", function() {
 
     function hotReloadApp() {
       fastboot.reload({
-        distPath: fixture('hot-swap-app')
+        distPath: fixture('hot-swap-app'),
       });
     }
   });
 
-  it("can reload the app using the same sandboxGlobals", function() {
-    var fastboot = new FastBoot({
+  it('can reload the app using the same sandboxGlobals', function() {
+    let fastboot = new FastBoot({
       distPath: fixture('basic-app'),
       sandboxGlobals: {
         foo: 5,
         najax: 'undefined',
-        myVar: 'undefined'
-      }
+        myVar: 'undefined',
+      },
     });
 
     return fastboot.visit('/')
@@ -218,27 +216,27 @@ describe("FastBoot", function() {
       .then(hotReloadApp)
       .then(() => fastboot.visit('/foo'))
       .then(r => r.html())
-      .then((html) => {
+      .then(html => {
         expect(html).to.match(/foo from sandbox: 5/);
         expect(html).to.match(/najax in sandbox: undefined/);
       });
 
     function hotReloadApp() {
       fastboot.reload({
-        distPath: fixture('custom-sandbox')
+        distPath: fixture('custom-sandbox'),
       });
     }
   });
 
-  it("can reload the app using the same sandbox class", function() {
-    var fastboot = new FastBoot({
+  it('can reload the app using the same sandbox class', function() {
+    let fastboot = new FastBoot({
       distPath: fixture('basic-app'),
       sandbox: CustomSandbox,
       sandboxGlobals: {
         myVar: 2,
         foo: 'undefined',
-        najax: 'undefined'
-      }
+        najax: 'undefined',
+      },
     });
 
     return fastboot.visit('/')
@@ -247,20 +245,20 @@ describe("FastBoot", function() {
       .then(hotReloadApp)
       .then(() => fastboot.visit('/foo'))
       .then(r => r.html())
-      .then((html) => {
+      .then(html => {
         expect(html).to.match(/myVar in sandbox: 2/);
       });
 
     function hotReloadApp() {
       fastboot.reload({
-        distPath: fixture('custom-sandbox')
+        distPath: fixture('custom-sandbox'),
       });
     }
   });
 
-  it("reads the config from package.json", function() {
-    var fastboot = new FastBoot({
-      distPath: fixture('config-app')
+  it('reads the config from package.json', function() {
+    let fastboot = new FastBoot({
+      distPath: fixture('config-app'),
     });
 
     return fastboot.visit('/')
@@ -268,26 +266,26 @@ describe("FastBoot", function() {
       .then(html => expect(html).to.match(/Config foo: bar/));
   });
 
-  it("prefers APP_CONFIG environment variable", function() {
-    var config = {
-      modulePrefix: "fastboot-test",
-      environment: "development",
-      baseURL: "/",
-      locationType: "auto",
-      EmberENV: { "FEATURES":{} },
+  it('prefers APP_CONFIG environment variable', function() {
+    let config = {
+      modulePrefix: 'fastboot-test',
+      environment: 'development',
+      baseURL: '/',
+      locationType: 'auto',
+      EmberENV: { 'FEATURES': {} },
       APP: {
-        name: "fastboot-test",
-        version: "0.0.0+3e9fe92d",
+        name: 'fastboot-test',
+        version: '0.0.0+3e9fe92d',
         autoboot: false,
-        foo: "baz"
+        foo: 'baz',
       },
-      exportApplicationGlobal:true
+      exportApplicationGlobal: true,
     };
 
     process.env.APP_CONFIG = JSON.stringify(config);
 
-    var fastboot = new FastBoot({
-      distPath: fixture('config-app')
+    let fastboot = new FastBoot({
+      distPath: fixture('config-app'),
     });
 
     delete process.env.APP_CONFIG;
@@ -297,9 +295,9 @@ describe("FastBoot", function() {
       .then(html => expect(html).to.match(/Config foo: baz/));
   });
 
-  it("handles apps with config defined in app.js", function() {
-    var fastboot = new FastBoot({
-      distPath: fixture('config-not-in-meta-app')
+  it('handles apps with config defined in app.js', function() {
+    let fastboot = new FastBoot({
+      distPath: fixture('config-not-in-meta-app'),
     });
 
     return fastboot.visit('/')
@@ -307,15 +305,15 @@ describe("FastBoot", function() {
       .then(html => expect(html).to.match(/Welcome to Ember/));
   });
 
-  it("reloads the config when package.json changes", function() {
-    var distPath = fixture('config-swap-app');
-    var packagePath = path.join(distPath, 'package.json');
-    var package1Path = path.join(distPath, 'package-1.json');
-    var package2Path = path.join(distPath, 'package-2.json');
+  it('reloads the config when package.json changes', function() {
+    let distPath = fixture('config-swap-app');
+    let packagePath = path.join(distPath, 'package.json');
+    let package1Path = path.join(distPath, 'package-1.json');
+    let package2Path = path.join(distPath, 'package-2.json');
 
     copyPackage(package1Path);
-    var fastboot = new FastBoot({
-      distPath: distPath
+    let fastboot = new FastBoot({
+      distPath,
     });
 
     return fastboot.visit('/')
@@ -331,7 +329,7 @@ describe("FastBoot", function() {
 
     function hotReloadApp() {
       fastboot.reload({
-        distPath: distPath
+        distPath,
       });
     }
 
@@ -344,13 +342,13 @@ describe("FastBoot", function() {
     }
   });
 
-  it("handles apps boot-time failures by throwing Errors", function() {
-    var fastboot = new FastBoot({
-      distPath: fixture('boot-time-failing-app')
+  it('handles apps boot-time failures by throwing Errors', function() {
+    let fastboot = new FastBoot({
+      distPath: fixture('boot-time-failing-app'),
     });
 
     return fastboot.visit('/')
-    .catch((e) => expect(e).to.be.an('error'));
+    .catch(e => expect(e).to.be.an('error'));
   });
 
   it("matches app's fastboot-info and result's fastboot-info", function() {

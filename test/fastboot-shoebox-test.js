@@ -1,16 +1,14 @@
 'use strict';
 
 const expect = require('chai').expect;
-const fs = require('fs');
-const path = require('path');
 const fixture = require('./helpers/fixture-path');
 const FastBoot = require('./../src/index');
 
-describe("FastBootShoebox", function() {
+describe('FastBootShoebox', function() {
 
-  it("can render the escaped shoebox HTML", function() {
-    var fastboot = new FastBoot({
-      distPath: fixture('shoebox')
+  it('can render the escaped shoebox HTML', function() {
+    let fastboot = new FastBoot({
+      distPath: fixture('shoebox'),
     });
 
     return fastboot.visit('/')
@@ -26,13 +24,13 @@ describe("FastBootShoebox", function() {
       });
   });
 
-  it("can render the escaped shoebox HTML with shouldRender set to false", function() {
-    var fastboot = new FastBoot({
-      distPath: fixture('shoebox')
+  it('can render the escaped shoebox HTML with shouldRender set to false', function() {
+    let fastboot = new FastBoot({
+      distPath: fixture('shoebox'),
     });
 
     return fastboot.visit('/', {
-      shouldRender: false
+      shouldRender: false,
     })
       .then(r => r.html())
       .then(html => {
@@ -46,13 +44,13 @@ describe("FastBootShoebox", function() {
       });
   });
 
-  it("cannot render the escaped shoebox HTML when disableShoebox is set to true", function() {
-    var fastboot = new FastBoot({
-      distPath: fixture('shoebox')
+  it('cannot render the escaped shoebox HTML when disableShoebox is set to true', function() {
+    let fastboot = new FastBoot({
+      distPath: fixture('shoebox'),
     });
 
     return fastboot.visit('/', {
-      disableShoebox: true
+      disableShoebox: true,
     })
       .then(r => r.html())
       .then(html => {
