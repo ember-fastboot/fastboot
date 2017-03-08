@@ -40,10 +40,12 @@
   },
   "devDependencies": {
     "chai": "^3.5.0",
-    "chai-as-promised": "^5.2.0",
+    "chai-as-promised": "^6.0.0",
+    "eslint-plugin-chai-expect": "^1.1.1",
+    "eslint-plugin-mocha": "^4.8.0",
     "fs-promise": "^0.5.0",
-    "mocha": "^2.4.5",
-    "mocha-jshint": "^2.3.1",
+    "mocha": "^3.2.0",
+    "mocha-eslint": "^3.0.1",
     "rimraf": "^2.5.4",
     "temp": "^0.8.3"
   }
