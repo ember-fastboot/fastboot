@@ -70,8 +70,8 @@ class EmberApp {
       najax,
       FastBoot: {
         require: sandboxRequire,
-        config: appConfig
-      }
+        config: appConfig,
+      },
     };
 
     globals = Object.assign(globals, sandboxGlobals);
@@ -95,8 +95,8 @@ class EmberApp {
    * @param {string} distPath path to the built Ember app
    */
   buildWhitelistedRequire(whitelist, distPath) {
-    whitelist.forEach(function(whitelistedModule) {
-      debug("module whitelisted; module=%s", whitelistedModule);
+    whitelist.forEach(whitelistedModule => {
+      debug('module whitelisted; module=%s', whitelistedModule);
     });
 
     return function(moduleName) {
@@ -110,7 +110,7 @@ class EmberApp {
           return require(moduleName);
         }
       } else {
-        throw new Error("Unable to require module '" + moduleName + "' because it was not in the whitelist.");
+        throw new Error(`Unable to require module '${moduleName}' because it was not in the whitelist.`);
       }
     };
   }
@@ -128,21 +128,21 @@ class EmberApp {
 
     sandbox.eval('sourceMapSupport.install(Error);');
 
-    debug("evaluating app and vendor files");
+    debug('evaluating app and vendor files');
 
-    vendorFilePaths.forEach(function(vendorFilePath) {
-      debug("evaluating vendor file %s", vendorFilePath);
+    vendorFilePaths.forEach(vendorFilePath => {
+      debug('evaluating vendor file %s', vendorFilePath);
       let vendorFile = fs.readFileSync(vendorFilePath, 'utf8');
       sandbox.eval(vendorFile, vendorFilePath);
     });
-    debug("vendor file evaluated");
+    debug('vendor file evaluated');
 
-    appFilePaths.forEach(function(appFilePath) {
-      debug("evaluating app file %s", appFilePath);
+    appFilePaths.forEach(appFilePath => {
+      debug('evaluating app file %s', appFilePath);
       let appFile = fs.readFileSync(appFilePath, 'utf8');
       sandbox.eval(appFile, appFilePath);
     });
-    debug("app files evaluated");
+    debug('app files evaluated');
   }
 
   /**
@@ -155,9 +155,7 @@ class EmberApp {
     let sandbox = this.sandbox;
 
     // Retrieve the application factory from within the sandbox
-    let AppFactory = sandbox.run(function(ctx) {
-      return ctx.require('~fastboot/app-factory');
-    });
+    let AppFactory = sandbox.run(ctx => ctx.require('~fastboot/app-factory'));
 
     // If the application factory couldn't be found, throw an error
     if (!AppFactory || typeof AppFactory['default'] !== 'function') {
@@ -202,7 +200,7 @@ class EmberApp {
    * @returns {Promise<Ember.ApplicationInstance>} instance
    */
   buildAppInstance() {
-    return this.app.boot().then(function(app) {
+    return this.app.boot().then(app => {
       debug('building instance');
       return app.buildInstance();
     });
@@ -283,11 +281,12 @@ class EmberApp {
     let doc = bootOptions.document;
 
     let result = new Result({
-      doc: doc,
-      html: html,
-      fastbootInfo: fastbootInfo
+      doc,
+      html,
+      fastbootInfo,
     });
 
+    let instance;
     let destroyAppInstanceTimer;
     if (destroyAppInstanceInMs > 0) {
       // start a timer to destroy the appInstance forcefully in the given ms.
@@ -374,7 +373,7 @@ class EmberApp {
       htmlFile: path.join(distPath, manifest.htmlFile),
       moduleWhitelist: pkg.fastboot.moduleWhitelist,
       hostWhitelist: pkg.fastboot.hostWhitelist,
-      appConfig: pkg.fastboot.appConfig
+      appConfig: pkg.fastboot.appConfig,
     };
   }
 
@@ -401,7 +400,7 @@ function buildBootOptions(shouldRender) {
     isBrowser: false,
     document: doc,
     rootElement,
-    shouldRender
+    shouldRender,
   };
 }
 
@@ -440,15 +439,13 @@ const JSON_ESCAPE = {
   '>': '\\u003e',
   '<': '\\u003c',
   '\u2028': '\\u2028',
-  '\u2029': '\\u2029'
+  '\u2029': '\\u2029',
 };
 
 const JSON_ESCAPE_REGEXP = /[\u2028\u2029&><]/g;
 
 function escapeJSONString(string) {
-  return string.replace(JSON_ESCAPE_REGEXP, function(match) {
-    return JSON_ESCAPE[match];
-  });
+  return string.replace(JSON_ESCAPE_REGEXP, match => JSON_ESCAPE[match]);
 }
 
 /*

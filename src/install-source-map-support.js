@@ -1,9 +1,9 @@
-var sourceMapSupport = require('source-map-support');
+'use strict';
+
+const sourceMapSupport = require('source-map-support');
 
 function prepareStackTrace(error, stack) {
-  return error + stack.map(function(frame) {
-    return '\n    at ' + sourceMapSupport.wrapCallSite(frame);
-  }).join('');
+  return error + stack.map(frame => `\n    at ${sourceMapSupport.wrapCallSite(frame)}`).join('');
 }
 
 function install(errorClass) {
@@ -18,5 +18,5 @@ function install(errorClass) {
 }
 
 module.exports = {
-  install: install
+  install,
 };

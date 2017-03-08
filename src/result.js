@@ -54,7 +54,7 @@ class Result {
   domContents() {
     return {
       head: this._head,
-      body: this._body
+      body: this._body,
     };
   }
 
@@ -68,7 +68,7 @@ class Result {
    */
   _finalize() {
     if (this.finalized) {
-      throw new Error("Results cannot be finalized more than once");
+      throw new Error('Results cannot be finalized more than once');
     }
 
     // Grab some metadata from the sandboxed application instance

@@ -112,9 +112,9 @@ class FastBoot {
 
     this.distPath = distPath;
     this._app = new EmberApp({
-      distPath: distPath,
-      sandbox: sandbox,
-      sandboxGlobals: sandboxGlobals
+      distPath,
+      sandbox,
+      sandboxGlobals,
     });
   }
 
