@@ -1,5 +1,5 @@
 test
 .gitignore
-.jshintignore
-.jshintrc
+.eslintignore
+.eslintrc
 .travis.yml
