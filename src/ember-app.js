@@ -44,6 +44,9 @@ class EmberApp {
       this.appConfig = JSON.parse(process.env.APP_CONFIG);
     }
 
+    // FIXME ember-cli-fastboot should add it to dist/package.json
+    this.shoeboxAppendTo = this.appConfig.fastboot.shoeboxAppendTo;
+
     this.html = fs.readFileSync(config.htmlFile, 'utf8');
 
     this.sandbox = this.buildSandbox(distPath, options.sandbox, options.sandboxGlobals);
@@ -275,6 +278,7 @@ class EmberApp {
     let html = options.html || this.html;
     let disableShoebox = options.disableShoebox || false;
     let destroyAppInstanceInMs = options.destroyAppInstanceInMs;
+    let shoeboxAppendTo = this.shoeboxAppendTo;
 
     let shouldRender = (options.shouldRender !== undefined) ? options.shouldRender : true;
     let bootOptions = buildBootOptions(shouldRender);
@@ -313,7 +317,7 @@ class EmberApp {
       .then(() => {
         if (!disableShoebox) {
           // if shoebox is not disabled, then create the shoebox and send API data
-          createShoebox(doc, fastbootInfo);
+          createShoebox(doc, fastbootInfo, shoeboxAppendTo);
         }
       })
       .catch(error => result.error = error)
@@ -441,9 +445,11 @@ function waitForApp(instance) {
  * parse the specific item at the time it is needed instead of everything
  * all at once.
  */
-function createShoebox(doc, fastbootInfo) {
+function createShoebox(doc, fastbootInfo, shoeboxAppendTo) {
   let shoebox = fastbootInfo.shoebox;
   if (!shoebox) { return RSVP.resolve(); }
+
+  let appendTo = shoeboxAppendTo || 'body';
 
   for (let key in shoebox) {
     if (!shoebox.hasOwnProperty(key)) { continue; }
@@ -458,7 +464,7 @@ function createShoebox(doc, fastbootInfo) {
     scriptEl.setAttribute('type', 'fastboot/shoebox');
     scriptEl.setAttribute('id', `shoebox-${key}`);
     scriptEl.appendChild(scriptText);
-    doc.body.appendChild(scriptEl);
+    doc[appendTo].appendChild(scriptEl);
   }
 
   return RSVP.resolve();
