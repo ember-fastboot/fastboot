@@ -116,19 +116,19 @@ describe('Result', function() {
       });
     });
 
-    describe('when the document has special-case content', function () {
-      var BODY = '<h1>A special response document: $$</h1>';
+    describe('when the document has special-case content', function() {
+      const BODY = '<h1>A special response document: $$</h1>';
 
-      beforeEach(function () {
+      beforeEach(function() {
         doc.body.appendChild(doc.createRawHTMLSection(BODY));
 
         result._fastbootInfo.response.statusCode = 418;
         result._finalize();
       });
 
-      it('it should handle \'$$\' correctly (due to `String.replace()` gotcha)', function () {
+      it('it should handle \'$$\' correctly (due to `String.replace()` gotcha)', function() {
         return result.html()
-        .then(function (result) {
+        .then(function(result) {
           expect(result).to.include(BODY);
         });
       });
