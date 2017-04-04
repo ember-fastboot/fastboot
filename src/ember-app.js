@@ -39,13 +39,11 @@ class EmberApp {
     this.moduleWhitelist = config.moduleWhitelist;
     this.hostWhitelist = config.hostWhitelist;
     this.appConfig = config.appConfig;
+    this.shoeboxAppendTo = config.shoeboxAppendTo;
 
     if (process.env.APP_CONFIG) {
       this.appConfig = JSON.parse(process.env.APP_CONFIG);
     }
-
-    // FIXME ember-cli-fastboot should add it to dist/package.json
-    this.shoeboxAppendTo = this.appConfig.fastboot.shoeboxAppendTo;
 
     this.html = fs.readFileSync(config.htmlFile, 'utf8');
 
@@ -393,7 +391,8 @@ class EmberApp {
       htmlFile: path.join(distPath, manifest.htmlFile),
       moduleWhitelist: pkg.fastboot.moduleWhitelist,
       hostWhitelist: pkg.fastboot.hostWhitelist,
-      appConfig: pkg.fastboot.appConfig
+      appConfig: pkg.fastboot.appConfig,
+      shoeboxAppendTo: pkg.fastboot.shoeboxAppendTo
     };
   }
 
