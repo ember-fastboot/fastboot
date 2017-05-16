@@ -422,6 +422,8 @@ function createShoebox(doc, fastbootInfo) {
 
     let value = shoebox[key];
     let textValue = JSON.stringify(value);
+    if (textValue === undefined) { continue; }
+
     textValue = escapeJSONString(textValue);
 
     let scriptText = doc.createRawHTMLSection(textValue);

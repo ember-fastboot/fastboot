@@ -300,6 +300,7 @@ define('fastboot-test/routes/application', ['exports', 'ember'], function (expor
         shoebox.put('key3', { htmlSpecialCase: 'R&B > Jazz' });
         shoebox.put('key4', { nastyScriptCase: "<script>alert('owned');</script></script></script>" });
         shoebox.put('key5', { otherUnicodeChars: '&&>><<\u2028\u2028\u2029\u2029' });
+        shoebox.put('key6', undefined);
       }
     }
   });
