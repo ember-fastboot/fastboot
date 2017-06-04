@@ -227,20 +227,16 @@ class EmberApp {
    * @return {Promise<instance>} instance
    */
   visitRoute(path, fastbootInfo, bootOptions, result) {
-    let instance;
-
     return this.buildAppInstance()
-      .then(appInstance => {
-        instance = appInstance;
+      .then(instance => {
         result.instance = instance;
         registerFastBootInfo(fastbootInfo, instance);
-
         return instance.boot(bootOptions);
       })
       .then(() => result.instanceBooted = true)
-      .then(() => instance.visit(path, bootOptions))
+      .then(() => result.instance.visit(path, bootOptions))
       .then(() => fastbootInfo.deferredPromise)
-      .then(() => instance);
+      .then(() => result);
   }
 
   /**

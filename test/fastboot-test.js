@@ -106,7 +106,18 @@ describe("FastBoot", function() {
       distPath: fixture('basic-app')
     });
 
-    return fastboot.visit('/', { destroyAppInstanceInMs: 5 })
+    // delaying `visitRoute` to forcefully destroy app instance
+    let originalVisitRoute = fastboot._app.visitRoute;
+    fastboot._app.visitRoute = function() {
+      return originalVisitRoute.apply(this, arguments)
+        .then(function() {
+          return new Promise(function(resolve) {
+            setTimeout(resolve, 2000);
+          });
+        });
+    };
+
+    fastboot.visit('/', { destroyAppInstanceInMs: 5 })
       .catch((e) => {
         expect(e.message).to.equal('App instance was forcefully destroyed in 5ms');
         done();
@@ -349,7 +360,7 @@ describe("FastBoot", function() {
       distPath: fixture('boot-time-failing-app')
     });
 
-    return fastboot.visit('/')
+    fastboot.visit('/')
       .catch((e) => {
         expect(e).to.be.an('error');
         done();
