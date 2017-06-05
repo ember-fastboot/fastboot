@@ -230,13 +230,13 @@ class EmberApp {
     return this.buildAppInstance()
       .then(instance => {
         result.instance = instance;
+        result._startDestroyTimer();
         registerFastBootInfo(fastbootInfo, instance);
         return instance.boot(bootOptions);
       })
       .then(() => result.instanceBooted = true)
       .then(() => result.instance.visit(path, bootOptions))
-      .then(() => fastbootInfo.deferredPromise)
-      .then(() => result);
+      .then(() => fastbootInfo.deferredPromise);
   }
 
   /**
@@ -271,29 +271,13 @@ class EmberApp {
     let shouldRender = (options.shouldRender !== undefined) ? options.shouldRender : true;
     let bootOptions = buildBootOptions(shouldRender);
     let fastbootInfo = new FastBootInfo(
-      req,
-      res,
+      req, res,
       { hostWhitelist: this.hostWhitelist, metadata: options.metadata }
     );
 
     let doc = bootOptions.document;
 
-    let result = new Result({
-      doc: doc,
-      html: html,
-      fastbootInfo: fastbootInfo
-    });
-
-    let destroyAppInstanceTimer;
-    if (destroyAppInstanceInMs > 0) {
-      // start a timer to destroy the appInstance forcefully in the given ms.
-      // This is a failure mechanism so that node process doesn't get wedged if the `visit` never completes.
-      destroyAppInstanceTimer = setTimeout(function() {
-        if (result._destroyAppInstance()) {
-          result.error = new Error('App instance was forcefully destroyed in ' + destroyAppInstanceInMs + 'ms');
-        }
-      }, destroyAppInstanceInMs);
-    }
+    let result = new Result({ doc, html, fastbootInfo, destroyAppInstanceInMs });
 
     return this.visitRoute(path, fastbootInfo, bootOptions, result)
       .then(() => {
@@ -304,13 +288,7 @@ class EmberApp {
       })
       .catch(error => result.error = error)
       .then(() => result._finalize())
-      .finally(() => {
-        if (result._destroyAppInstance()) {
-          if (destroyAppInstanceTimer) {
-            clearTimeout(destroyAppInstanceTimer);
-          }
-        }
-      });
+      .finally(() => result._destroyAppInstance());
   }
 
   /**
