@@ -230,14 +230,14 @@ class EmberApp {
     return this.buildAppInstance()
       .then(instance => {
         result.instance = instance;
-        return new Promise(function(resolve, reject) {
+        return new Promise((resolve, reject) => {
           let timer;
           if (destroyAppInstanceInMs > 0) {
             // start a timer to destroy the appInstance forcefully in the given ms.
             // This is a failure mechanism so that node process doesn't get wedged if the `visit` never completes.
-            timer = setTimeout(()=> {
+            timer = setTimeout(() => {
               if (result._destroyAppInstance()) {
-                reject(new Error('App instance was forcefully destroyed in ' + destroyAppInstanceInMs + 'ms'));
+                reject(new Error('Fastboot forcefully destroyed App instance in ' + destroyAppInstanceInMs + 'ms'));
               }
             }, destroyAppInstanceInMs);
           }

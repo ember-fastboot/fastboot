@@ -106,9 +106,9 @@ describe("FastBoot", function() {
       distPath: fixture('long-resolving-app')
     });
 
-    fastboot.visit('/', { destroyAppInstanceInMs: 300 })
+    fastboot.visit('/', { destroyAppInstanceInMs: 5 })
       .catch((e) => {
-        expect(e.message).to.equal('App instance was forcefully destroyed in 300ms');
+        expect(e.message).to.equal('Fastboot forcefully destroyed App instance in 5ms');
         done();
       });
   });
