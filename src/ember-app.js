@@ -226,17 +226,31 @@ class EmberApp {
    * @param {Object} result
    * @return {Promise<instance>} instance
    */
-  visitRoute(path, fastbootInfo, bootOptions, result) {
+  visitRoute(path, fastbootInfo, bootOptions, result, destroyAppInstanceInMs) {
     return this.buildAppInstance()
       .then(instance => {
         result.instance = instance;
-        result._startDestroyTimer();
-        registerFastBootInfo(fastbootInfo, instance);
-        return instance.boot(bootOptions);
-      })
-      .then(() => result.instanceBooted = true)
-      .then(() => result.instance.visit(path, bootOptions))
-      .then(() => fastbootInfo.deferredPromise);
+        return new Promise(function(resolve, reject) {
+          let timer;
+          if (destroyAppInstanceInMs > 0) {
+            // start a timer to destroy the appInstance forcefully in the given ms.
+            // This is a failure mechanism so that node process doesn't get wedged if the `visit` never completes.
+            timer = setTimeout(()=> {
+              if (result._destroyAppInstance()) {
+                reject(new Error('App instance was forcefully destroyed in ' + destroyAppInstanceInMs + 'ms'));
+              }
+            }, destroyAppInstanceInMs);
+          }
+
+          registerFastBootInfo(fastbootInfo, instance);
+          instance.boot(bootOptions)
+            .then(() => result.instanceBooted = true)
+            .then(() => result.instance.visit(path, bootOptions))
+            .then(() => fastbootInfo.deferredPromise)
+            .then(() => clearTimeout(timer))
+            .then(resolve, reject);
+        });
+      });
   }
 
   /**
@@ -277,9 +291,9 @@ class EmberApp {
 
     let doc = bootOptions.document;
 
-    let result = new Result({ doc, html, fastbootInfo, destroyAppInstanceInMs });
+    let result = new Result({ doc, html, fastbootInfo });
 
-    return this.visitRoute(path, fastbootInfo, bootOptions, result)
+    return this.visitRoute(path, fastbootInfo, bootOptions, result, destroyAppInstanceInMs)
       .then(() => {
         if (!disableShoebox) {
           // if shoebox is not disabled, then create the shoebox and send API data

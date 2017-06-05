@@ -15,8 +15,6 @@ class Result {
     this._doc = options.doc;
     this._html = options.html;
     this._fastbootInfo = options.fastbootInfo;
-    this._destroyAppInstanceInMs = options.destroyAppInstanceInMs;
-    this._destroyAppInstanceTimer = undefined;
   }
 
   /**
@@ -69,6 +67,7 @@ class Result {
    * to this Result instance.
    */
   _finalize() {
+    if (this._instanceDestroyed) { return this; }
     if (this.finalized) {
       throw new Error("Results cannot be finalized more than once");
     }
@@ -99,23 +98,10 @@ class Result {
     }
   }
 
-  _startDestroyTimer() {
-    if (this._destroyAppInstanceInMs > 0 && !this._instanceDestroyed) {
-      // start a timer to destroy the appInstance forcefully in the given ms.
-      // This is a failure mechanism so that node process doesn't get wedged if the `visit` never completes.
-      this._destroyAppInstanceTimer = setTimeout(()=> {
-        if (this._destroyAppInstance()) {
-          this.error = new Error('App instance was forcefully destroyed in ' + this._destroyAppInstanceInMs + 'ms');
-        }
-      }, this._destroyAppInstanceInMs);
-    }
-  }
-
   _destroyAppInstance() {
     if (this.instance && !this._instanceDestroyed) {
       this._instanceDestroyed = true;
       this.instance.destroy();
-      clearTimeout(this._destroyAppInstanceTimer);
       return true;
     }
     return false;
