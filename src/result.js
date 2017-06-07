@@ -130,7 +130,7 @@ function insertIntoIndexHTML(html, head, body) {
 
   if (body) {
     let isBodyReplaced = false;
-    html = html.replace("<!-- EMBER_CLI_FASTBOOT_BODY -->", function() {
+    html = html.replace('<!-- EMBER_CLI_FASTBOOT_BODY -->', () => {
       isBodyReplaced = true;
       return body;
     });
@@ -142,7 +142,7 @@ function insertIntoIndexHTML(html, head, body) {
 
   if (head) {
     let isHeadReplaced = false;
-    html = html.replace("<!-- EMBER_CLI_FASTBOOT_HEAD -->", function() {
+    html = html.replace('<!-- EMBER_CLI_FASTBOOT_HEAD -->', () => {
       isHeadReplaced = true;
       return head;
     });

@@ -76,7 +76,9 @@ class EmberApp {
 
     globals = Object.assign(globals, sandboxGlobals);
 
+    /* eslint-disable new-cap */
     return new sandboxClass({ globals });
+    /* eslint-enable new-cap */
   }
 
   /**
@@ -286,14 +288,13 @@ class EmberApp {
       fastbootInfo,
     });
 
-    let instance;
     let destroyAppInstanceTimer;
     if (destroyAppInstanceInMs > 0) {
       // start a timer to destroy the appInstance forcefully in the given ms.
       // This is a failure mechanism so that node process doesn't get wedged if the `visit` never completes.
-      destroyAppInstanceTimer = setTimeout(function() {
+      destroyAppInstanceTimer = setTimeout(() => {
         if (result._destroyAppInstance()) {
-          result.error = new Error('App instance was forcefully destroyed in ' + destroyAppInstanceInMs + 'ms');
+          result.error = new Error(`App instance was forcefully destroyed in ${destroyAppInstanceInMs}ms`);
         }
       }, destroyAppInstanceInMs);
     }
@@ -357,19 +358,15 @@ class EmberApp {
       manifest = this.transformManifestFiles(manifest);
     }
 
-    debug("reading array of app file paths from manifest");
-    var appFiles = manifest.appFiles.map(function(appFile) {
-      return path.join(distPath, appFile);
-    });
+    debug('reading array of app file paths from manifest');
+    let appFiles = manifest.appFiles.map(appFile => path.join(distPath, appFile));
 
-    debug("reading array of vendor file paths from manifest");
-    var vendorFiles = manifest.vendorFiles.map(function(vendorFile) {
-      return path.join(distPath, vendorFile);
-    });
+    debug('reading array of vendor file paths from manifest');
+    let vendorFiles = manifest.vendorFiles.map(vendorFile => path.join(distPath, vendorFile));
 
     return {
-      appFiles: appFiles,
-      vendorFiles: vendorFiles,
+      appFiles,
+      vendorFiles,
       htmlFile: path.join(distPath, manifest.htmlFile),
       moduleWhitelist: pkg.fastboot.moduleWhitelist,
       hostWhitelist: pkg.fastboot.hostWhitelist,

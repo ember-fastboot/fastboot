@@ -29,9 +29,7 @@ class FastBootInfo {
   }
 
   deferRendering(promise) {
-    this.deferredPromise = this.deferredPromise.then(function() {
-      return promise;
-    });
+    this.deferredPromise = this.deferredPromise.then(() => promise);
   }
 
   /*

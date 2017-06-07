@@ -10,7 +10,7 @@ class VMSandbox extends Sandbox {
   }
 
   eval(source, filePath) {
-    var fileScript = new vm.Script(source, { filename: filePath });
+    let fileScript = new vm.Script(source, { filename: filePath });
     fileScript.runInContext(this.sandbox);
   }
 

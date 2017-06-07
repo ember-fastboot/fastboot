@@ -351,13 +351,13 @@ describe('FastBoot', function() {
     .catch(e => expect(e).to.be.an('error'));
   });
 
-  it("matches app's fastboot-info and result's fastboot-info", function() {
-    var fastboot = new FastBoot({
-      distPath: fixture('basic-app')
+  it('matches app\'s fastboot-info and result\'s fastboot-info', function() {
+    let fastboot = new FastBoot({
+      distPath: fixture('basic-app'),
     });
 
     return fastboot.visit('/')
-      .then((r) => {
+      .then(r => {
         let lookupFastboot = r.instance.lookup('info:-fastboot');
         expect(r._fastbootInfo).to.deep.equal(lookupFastboot);
       });

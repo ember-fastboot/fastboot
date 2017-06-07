@@ -22,10 +22,10 @@ class FastBootRequest {
       throw new Error('You must provide a hostWhitelist to retrieve the host');
     }
 
-    var host = this.headers.get('host');
-    var matchFound = this.hostWhitelist.some(function(entry) {
+    let host = this.headers.get('host');
+    let matchFound = this.hostWhitelist.some(entry => {
       if (entry[0] === '/' && entry.slice(-1) === '/') {
-        var regexp = new RegExp(entry.slice(1, -1));
+        let regexp = new RegExp(entry.slice(1, -1));
         return regexp.test(host);
       } else {
         return entry === host;
@@ -47,7 +47,7 @@ class FastBootRequest {
     }
 
     // Otherwise, try to parse the cookies ourselves, if they exist.
-    var cookies = request.headers.cookie;
+    let cookies = request.headers.cookie;
     if (cookies) {
       return cookie.parse(cookies);
     }
