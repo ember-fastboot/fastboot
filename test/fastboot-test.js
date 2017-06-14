@@ -38,6 +38,18 @@ describe("FastBoot", function() {
     expect(fn).to.throw(/An incompatible version between `ember-cli-fastboot` and `fastboot` was found/);
   });
 
+  it('throws an error when sandbox object is not valid', function() {
+    var distPath = fixture('higher-schema-version');
+    var fn = function() {
+      return new FastBoot({
+        distPath: distPath,
+        sandbox: 10
+      });
+    };
+
+    expect(fn).to.throw(/Sandbox object is required option to construct EmberApp object/);
+  });
+
   it("doesn't throw an exception if a package.json is provided", function() {
     var distPath = fixture('empty-package-json');
     var fn = function() {

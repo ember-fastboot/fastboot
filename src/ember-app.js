@@ -26,10 +26,14 @@ class EmberApp {
    * Create a new EmberApp.
    * @param {Object} options
    * @param {string} options.distPath - path to the built Ember application
-   * @param {Sandbox} [options.sandbox=VMSandbox] - sandbox to use
+   * @param {Sandbox} options.sandbox=VMSandbox - sandbox to use
    * @param {Object} [options.sandboxGlobals] - sandbox variables that can be added or used for overrides in the sandbox.
    */
   constructor(options) {
+    if (typeof options.sandbox === 'undefined' || !(options.sandbox instanceof Object)) {
+      throw new Error('Sandbox object is required option to construct EmberApp object');
+    }
+
     let distPath = path.resolve(options.distPath);
     let config = this.readPackageJSON(distPath);
 
