@@ -101,16 +101,15 @@ describe("FastBoot", function() {
       });
   });
 
-  it("can forcefully destroy the app instance using destroyAppInstanceInMs", function() {
+  it("can forcefully destroy the app instance using destroyAppInstanceInMs", function(done) {
     var fastboot = new FastBoot({
-      distPath: fixture('basic-app')
+      distPath: fixture('long-resolving-app')
     });
 
-    return fastboot.visit('/', {
-      destroyAppInstanceInMs: 5
-    })
+    fastboot.visit('/', { destroyAppInstanceInMs: 5 })
       .catch((e) => {
-        expect(e.message).to.equal('App instance was forcefully destroyed in 5ms');
+        expect(e.message).to.equal('Fastboot forcefully destroyed App instance in 5ms');
+        done();
       });
   });
 
@@ -158,14 +157,15 @@ describe("FastBoot", function() {
     return expect(fastboot.visit('/')).to.be.rejected;
   });
 
-  it("catches the error if an error occurs", function() {
+  it("catches the error if an error occurs", function(done) {
     var fastboot = new FastBoot({
       distPath: fixture('rejected-promise')
     });
 
     fastboot.visit('/')
       .catch(function(err) {
-        return expect(err).to.be.not.null;
+        expect(err).to.be.not.null;
+        done();
       });
   });
 
@@ -344,13 +344,16 @@ describe("FastBoot", function() {
     }
   });
 
-  it("handles apps boot-time failures by throwing Errors", function() {
+  it("handles apps boot-time failures by throwing Errors", function(done) {
     var fastboot = new FastBoot({
       distPath: fixture('boot-time-failing-app')
     });
 
-    return fastboot.visit('/')
-    .catch((e) => expect(e).to.be.an('error'));
+    fastboot.visit('/')
+      .catch((e) => {
+        expect(e).to.be.an('error');
+        done();
+      });
   });
 
   it("matches app's fastboot-info and result's fastboot-info", function() {

@@ -67,6 +67,7 @@ class Result {
    * to this Result instance.
    */
   _finalize() {
+    if (this._instanceDestroyed) { return this; }
     if (this.finalized) {
       throw new Error("Results cannot be finalized more than once");
     }
