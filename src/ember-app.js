@@ -44,7 +44,7 @@ class EmberApp {
     }
 
     this.html = fs.readFileSync(config.htmlFile, 'utf8');
-    this.amp = this.htmlFile !== this.ampFile ? fs.readFileSync(config.ampFile, 'utf8') : this.html;
+    this.amp = config.htmlFile !== config.ampFile ? fs.readFileSync(config.ampFile, 'utf8') : this.html;
 
     this.sandbox = this.buildSandbox(distPath, options.sandbox, options.sandboxGlobals);
     this.app = this.retrieveSandboxedApp();
