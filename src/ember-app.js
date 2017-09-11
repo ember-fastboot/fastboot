@@ -44,6 +44,7 @@ class EmberApp {
     }
 
     this.html = fs.readFileSync(config.htmlFile, 'utf8');
+    this.amp = config.htmlFile !== config.ampFile ? fs.readFileSync(config.ampFile, 'utf8') : this.html;
 
     this.sandbox = this.buildSandbox(distPath, options.sandbox, options.sandboxGlobals);
     this.app = this.retrieveSandboxedApp();
@@ -267,8 +268,8 @@ class EmberApp {
   visit(path, options) {
     let req = options.request;
     let res = options.response;
-    let html = options.html || this.html;
     let disableShoebox = options.disableShoebox || false;
+     let html = options.html || options.ampMode ? this.amp : this.html;
     let destroyAppInstanceInMs = parseInt(options.destroyAppInstanceInMs, 10);
 
     let shouldRender = (options.shouldRender !== undefined) ? options.shouldRender : true;
@@ -370,6 +371,7 @@ class EmberApp {
     return {
       appFiles: appFiles,
       vendorFiles: vendorFiles,
+      ampFile: path.join(distPath, manifest.ampFile),
       htmlFile: path.join(distPath, manifest.htmlFile),
       moduleWhitelist: pkg.fastboot.moduleWhitelist,
       hostWhitelist: pkg.fastboot.hostWhitelist,

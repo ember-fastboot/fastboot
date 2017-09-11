@@ -76,6 +76,13 @@ class FastBoot {
       resilient = this.resilient;
     }
 
+    // Not sure what to make cause the switch
+    // As ember-cli-fastboot and fastboot-app-server
+    // Do not allow you to pass options down to the Fastboot Class
+    if (path.includes('?ampMode=true')) {
+      options.ampMode = true;
+    }
+
     return this._app.visit(path, options)
       .then(result => {
         if (!resilient && result.error) {
