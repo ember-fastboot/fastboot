@@ -2,7 +2,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const RSVP = require('rsvp');
 const chalk = require('chalk');
 
 const najax = require('najax');
@@ -69,21 +68,16 @@ class EmberApp {
 
     // add any additional user provided variables or override the default globals in the sandbox
     let globals = {
-      najax: najax,
+      najax,
       FastBoot: {
         require: sandboxRequire,
         config: appConfig
       }
     };
-    for (let key in sandboxGlobals) {
-      if (sandboxGlobals.hasOwnProperty(key)) {
-        globals[key] = sandboxGlobals[key];
-      }
-    }
 
-    return new sandboxClass({
-      globals: globals
-    });
+    globals = Object.assign(globals, sandboxGlobals);
+
+    return new sandboxClass({ globals });
   }
 
   /**
@@ -222,6 +216,10 @@ class EmberApp {
    * the app instance and then visits the given route and destroys the app instance
    * when the route is finished its render cycle.
    *
+   * Ember apps can manually defer rendering in FastBoot mode if they're waiting
+   * on something async the router doesn't know about. This function fetches
+   * that promise for deferred rendering from the app.
+   *
    * @param {string} path the URL path to render, like `/photos/1`
    * @param {Object} fastbootInfo An object holding per request info
    * @param {Object} bootOptions An object containing the boot options that are used by
@@ -240,12 +238,9 @@ class EmberApp {
 
         return instance.boot(bootOptions);
       })
-      .then(() => result.instanceBooted = true)
       .then(() => instance.visit(path, bootOptions))
-      .then(() => waitForApp(instance))
-      .then(() => {
-        return instance;
-      });
+      .then(() => fastbootInfo.deferredPromise)
+      .then(() => instance);
   }
 
   /**
@@ -275,7 +270,7 @@ class EmberApp {
     let res = options.response;
     let html = options.html || this.html;
     let disableShoebox = options.disableShoebox || false;
-    let destroyAppInstanceInMs = options.destroyAppInstanceInMs;
+    let destroyAppInstanceInMs = parseInt(options.destroyAppInstanceInMs, 10);
     let shoeboxAppendTo = this.shoeboxAppendTo;
 
     let shouldRender = (options.shouldRender !== undefined) ? options.shouldRender : true;
@@ -295,23 +290,17 @@ class EmberApp {
     });
 
     let destroyAppInstanceTimer;
-    if (parseInt(destroyAppInstanceInMs, 10) > 0) {
+    if (destroyAppInstanceInMs > 0) {
       // start a timer to destroy the appInstance forcefully in the given ms.
       // This is a failure mechanism so that node process doesn't get wedged if the `visit` never completes.
       destroyAppInstanceTimer = setTimeout(function() {
-        if (instance && !result.instanceDestroyed) {
-          result.instanceDestroyed = true;
+        if (result._destroyAppInstance()) {
           result.error = new Error('App instance was forcefully destroyed in ' + destroyAppInstanceInMs + 'ms');
-          instance.destroy();
         }
       }, destroyAppInstanceInMs);
     }
 
-    let instance;
     return this.visitRoute(path, fastbootInfo, bootOptions, result)
-      .then(appInstance => {
-        instance = appInstance;
-      })
       .then(() => {
         if (!disableShoebox) {
           // if shoebox is not disabled, then create the shoebox and send API data
@@ -321,10 +310,7 @@ class EmberApp {
       .catch(error => result.error = error)
       .then(() => result._finalize())
       .finally(() => {
-        if (instance && !result.instanceDestroyed) {
-          result.instanceDestroyed = true;
-          instance.destroy();
-
+        if (result._destroyAppInstance()) {
           if (destroyAppInstanceTimer) {
             clearTimeout(destroyAppInstanceTimer);
           }
@@ -373,20 +359,18 @@ class EmberApp {
       manifest = this.transformManifestFiles(manifest);
     }
 
-    var appFiles = [];
     debug("reading array of app file paths from manifest");
-    manifest.appFiles.forEach(function(appFile) {
-      appFiles.push(path.join(distPath, appFile));
+    var appFiles = manifest.appFiles.map(function(appFile) {
+      return path.join(distPath, appFile);
     });
 
-    var vendorFiles = [];
     debug("reading array of vendor file paths from manifest");
-    manifest.vendorFiles.forEach(function(vendorFile) {
-      vendorFiles.push(path.join(distPath, vendorFile));
+    var vendorFiles = manifest.vendorFiles.map(function(vendorFile) {
+      return path.join(distPath, vendorFile);
     });
 
     return {
-      appFiles:  appFiles,
+      appFiles: appFiles,
       vendorFiles: vendorFiles,
       htmlFile: path.join(distPath, manifest.htmlFile),
       moduleWhitelist: pkg.fastboot.moduleWhitelist,
@@ -424,19 +408,6 @@ function buildBootOptions(shouldRender) {
 }
 
 /*
- * Ember apps can manually defer rendering in FastBoot mode if they're waiting
- * on something async the router doesn't know about.  This function fetches
- * that promise for deferred rendering from the app.
- */
-function waitForApp(instance) {
-  let fastbootInfo = instance.lookup('info:-fastboot');
-
-  return fastbootInfo.deferredPromise.then(function() {
-    return instance;
-  });
-}
-
-/*
  * Writes the shoebox into the DOM for the browser rendered app to consume.
  * Uses a script tag with custom type so that the browser will treat as plain
  * text, and not expend effort trying to parse contents of the script tag.
@@ -445,14 +416,15 @@ function waitForApp(instance) {
  * all at once.
  */
 function createShoebox(doc, fastbootInfo, shoeboxAppendTo) {
+  const hasOwnProperty = Object.prototype.hasOwnProperty; // jshint ignore:line
+
   let shoebox = fastbootInfo.shoebox;
-  if (!shoebox) { return RSVP.resolve(); }
+  if (!shoebox) { return; }
 
   let appendTo = shoeboxAppendTo || 'body';
 
   for (let key in shoebox) {
-    if (!shoebox.hasOwnProperty(key)) { continue; }
-
+    if (!hasOwnProperty.call(shoebox, key)) { continue; } // TODO: remove this later #144, ember-fastboot/ember-cli-fastboot/pull/417
     let value = shoebox[key];
     let textValue = JSON.stringify(value);
     textValue = escapeJSONString(textValue);
@@ -465,8 +437,6 @@ function createShoebox(doc, fastbootInfo, shoeboxAppendTo) {
     scriptEl.appendChild(scriptText);
     doc[appendTo].appendChild(scriptEl);
   }
-
-  return RSVP.resolve();
 }
 
 const JSON_ESCAPE = {
