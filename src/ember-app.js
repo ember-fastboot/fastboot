@@ -38,7 +38,7 @@ class EmberApp {
     this.moduleWhitelist = config.moduleWhitelist;
     this.hostWhitelist = config.hostWhitelist;
     this.appConfig = config.appConfig;
-    this.shoeboxAppendTo = config.shoeboxAppendTo;
+    this.shoeboxAppendTo = this.appConfig.fastboot.shoeboxAppendTo;
 
     if (process.env.APP_CONFIG) {
       this.appConfig = JSON.parse(process.env.APP_CONFIG);
