@@ -121,9 +121,9 @@ class EmberApp {
 
     return function(moduleName) {
       if (whitelist.indexOf(moduleName) > -1) {
-        let nodeModulesPath = path.join(distPath, 'node_modules', moduleName);
+        let nodeModulesPath = path.join(distPath, '..', 'node_modules', moduleName);
 
-        if (existsSync(nodeModulesPath)) {
+        if (existsSync(nodeModulesPath) || existsSync(nodeModulesPath + '.js')) {
           return require(nodeModulesPath);
         } else {
           // If it's not on disk, assume it's a built-in node package
