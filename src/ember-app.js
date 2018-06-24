@@ -121,7 +121,7 @@ class EmberApp {
 
     return function(moduleName) {
       if (whitelist.indexOf(moduleName) > -1) {
-        let nodeModulesPath = path.join(distPath, 'node_modules', moduleName);
+        let nodeModulesPath = path.join(distPath, '..', 'node_modules', moduleName);
 
         if (existsSync(nodeModulesPath)) {
           return require(nodeModulesPath);
