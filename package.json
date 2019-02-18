@@ -47,7 +47,7 @@
     "eslint-plugin-node": "^8.0.0",
     "express": "^4.15.4",
     "lerna-changelog": "^0.8.2",
-    "mocha": "^5.2.0",
+    "mocha": "^6.0.0",
     "rimraf": "^2.6.2",
     "temp": "^0.8.3"
   }
