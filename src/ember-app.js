@@ -487,6 +487,8 @@ function createShoebox(doc, fastbootInfo) {
     if (!hasOwnProperty.call(shoebox, key)) { continue; } // TODO: remove this later #144, ember-fastboot/ember-cli-fastboot/pull/417
     let value = shoebox[key];
     let textValue = JSON.stringify(value);
+    if (textValue === undefined) { continue; }
+
     textValue = escapeJSONString(textValue);
 
     let scriptText = doc.createRawHTMLSection(textValue);
