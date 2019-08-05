@@ -397,10 +397,6 @@ class EmberApp {
     // set schema version to 1 if not defined
     schemaVersion = schemaVersion || FastBootSchemaVersions.base;
     debug('Current schemaVersion from `ember-cli-fastboot` is %s while latest schema version is %s', schemaVersion, currentSchemaVersion);
-<<<<<<< HEAD
-
-=======
->>>>>>> 3a618d6... Restore allowing fallback require from working directory
     if (schemaVersion > currentSchemaVersion) {
       let errorMsg = chalk.bold.red('An incompatible version between `ember-cli-fastboot` and `fastboot` was found. Please update the version of fastboot library that is compatible with ember-cli-fastboot.');
       throw new Error(errorMsg);
