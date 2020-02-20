@@ -1,5 +1,4 @@
 var express = require('express');
-var RSVP = require('rsvp');
 var FastBoot = require('./../src/index');
 
 function TestHTTPServer(options) {
@@ -24,11 +23,10 @@ TestHTTPServer.prototype.start = function() {
 
     app.get('/*', server.middleware());
 
-    return new RSVP.Promise(function(resolve, reject) {
+    return new Promise(function(resolve) {
       var listener = app.listen(options.port, options.host, function() {
         var host = listener.address().address;
         var port = listener.address().port;
-        var family = listener.address().family;
 
         self.listener = listener;
 

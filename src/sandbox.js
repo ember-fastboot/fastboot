@@ -1,34 +1,35 @@
 'use strict';
 
 const chalk = require('chalk');
+const vm = require('vm');
+const sourceMapSupport = require('source-map-support');
 
-class Sandbox {
+module.exports = class Sandbox {
+  constructor(globals) {
+    this.globals = globals;
 
-  constructor(options) {
-    this.globals = options.globals;
-    this.sandbox = this.buildSandbox();
+    let sandbox = this.buildSandbox();
+    this.context = vm.createContext(sandbox);
   }
 
   buildSandbox() {
-    var console = this.buildWrappedConsole();
-    var sourceMapSupport = require('./install-source-map-support');
-    var URL = require('url');
-    var globals = this.globals;
+    let console = this.buildWrappedConsole();
+    let URL = require('url');
+    let globals = this.globals;
 
-    var sandbox = {
-      sourceMapSupport: sourceMapSupport,
-      console: console,
-      setTimeout: setTimeout,
-      clearTimeout: clearTimeout,
-      URL: URL,
+    let sandbox = Object.assign(
+      {
+        sourceMapSupport,
+        console,
+        setTimeout,
+        clearTimeout,
+        URL,
 
-      // Convince jQuery not to assume it's in a browser
-      module: { exports: {} }
-    };
-
-    for (var key in globals) {
-      sandbox[key] = globals[key];
-    }
+        // Convince jQuery not to assume it's in a browser
+        module: { exports: {} },
+      },
+      globals
+    );
 
     // Set the global as `window`.
     sandbox.window = sandbox;
@@ -38,15 +39,30 @@ class Sandbox {
   }
 
   buildWrappedConsole() {
-    var wrappedConsole =  Object.create(console);
-    wrappedConsole.error = function() {
-      console.error.apply(console, Array.prototype.map.call(arguments, function(a) {
-        return typeof a === 'string' ? chalk.red(a) : a;
-      }));
+    let wrappedConsole = Object.create(console);
+
+    wrappedConsole.error = function(...args) {
+      console.error.apply(
+        console,
+        args.map(function(a) {
+          return typeof a === 'string' ? chalk.red(a) : a;
+        })
+      );
     };
 
     return wrappedConsole;
   }
-}
 
-module.exports = Sandbox;
+  runScript(script) {
+    script.runInContext(this.context);
+  }
+
+  eval(source, filePath) {
+    var fileScript = new vm.Script(source, { filename: filePath });
+    fileScript.runInContext(this.context);
+  }
+
+  run(cb) {
+    return cb.call(this.context, this.context);
+  }
+};

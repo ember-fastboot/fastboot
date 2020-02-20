@@ -2,7 +2,7 @@
 
 [![Greenkeeper badge](https://badges.greenkeeper.io/ember-fastboot/fastboot.svg)](https://greenkeeper.io/)
 [![npm version](https://badge.fury.io/js/fastboot.svg)](https://badge.fury.io/js/fastboot)
-[![Build Status](https://travis-ci.org/ember-fastboot/fastboot.svg?branch=master)](https://travis-ci.org/ember-fastboot/ember-fastboot-server)
+[![Build Status](https://travis-ci.org/ember-fastboot/fastboot.svg?branch=master)](https://travis-ci.org/ember-fastboot/fastboot)
 ![Ember Version](https://embadge.io/v1/badge.svg?start=2.3.0)
 
 FastBoot is a library for rendering Ember.js applications in Node.js.
@@ -17,7 +17,7 @@ To serve server-rendered versions of your Ember app over HTTP, see the
 [FastBoot App
 Server](https://github.com/ember-fastboot/fastboot-app-server).
 
-FastBoot requires Node.js v4 or later.
+FastBoot requires Node.js v6 or later.
 
 ## Usage
 
@@ -28,8 +28,14 @@ let app = new FastBoot({
   distPath: 'path/to/dist',
   // optional boolean flag when set to true does not reject the promise if there are rendering errors (defaults to false)
   resilient: <boolean>,
-  sandbox: 'path/to/sandbox/class', // optional sandbox class (defaults to vm-sandbox)
-  sandboxGlobals: {...} // optional map of key value pairs to expose in the sandbox
+
+  // optional function used to generate the set of global properties available within the sandbox, receives default globals
+  // and is expected to return an object (the default implementation returns the passed in defaults)
+  buildSandboxGlobals(defaultGlobals) {
+    return Object.assign({}, defaultGlobals, {
+      // additional global properties to define within the sandbox
+    });
+  },
 });
 
 app.visit('/photos', options)
@@ -40,6 +46,16 @@ app.visit('/photos', options)
 In order to get a `dist` directory, you will first need to build your
 Ember application, which packages it up for using in both the browser
 and in Node.js.
+
+### Default globals
+
+`FastBoot` object will be available to the sandboxed environment. This object has the following form:
+
+```
+FastBoot.require  // provides a mechanism to load additional modules. Note: these modules are only those included in the module whitelist
+FastBoot.config   // a function which takes a key, and returns the corresponding fastboot config value
+FastBoot.distPath // readOnly accessor that provides the dist path for the current fastboot sandbox
+```
 
 ### Additional configuration
 
@@ -52,6 +68,7 @@ configuration:
 - `shouldRender`: boolean to indicate whether the app should do rendering or not. If set to false, it puts the app in routing-only. Defaults to true.
 - `disableShoebox`: boolean to indicate whether we should send the API data in the shoebox. If set to false, it will not send the API data used for rendering the app on server side in the index.html. Defaults to false.
 - `destroyAppInstanceInMs`: whether to destroy the instance in the given number of ms. This is a failure mechanism to not wedge the Node process
+- `buildSandboxPerVisit`: whether to create a new sandbox context per-visit (slows down each visit, but guarantees no prototype leakages can occur), or reuse the existing sandbox (faster per-request, but each request shares the same set of prototypes). Defaults to false.
 
 ### Build Your App
 
@@ -63,14 +80,22 @@ build command:
 $ ember build --environment production
 ```
 
-(You will need to have already set up the Ember CLI FastBoot addon. For
-more information, see the [FastBoot quickstart][quickstart].)
+(You will need to have already set up the [ember-cli-fastboot](https://github.com/ember-fastboot/ember-cli-fastboot) addon.
+For more information, see the [FastBoot quickstart][quickstart].)
 
 [quickstart]: https://www.ember-fastboot.com/quickstart
 
 Once this is done, you will have a `dist` directory that contains the
-multi-environment build of your app. Upload this file to your FastBoot
-server.
+multi-environment build of your app.
+
+Run the command to install run time node modules:
+
+```sh
+$ cd dist/
+$ npm install
+```
+
+Upload the `dist/` folder including `node_modules` to your FastBoot server.
 
 ### Command Line
 

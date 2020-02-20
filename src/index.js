@@ -13,9 +13,8 @@ const EmberApp = require('./ember-app');
  * are run inside a sandbox that prohibits them from accessing the normal
  * Node.js environment.
  *
- * By default, this sandbox is the built-in `VMSandbox` class, which uses
- * Node's `vm` module. You may provide your own sandbox implementation by
- * passing the `sandbox` option or add and/or override sandbox variables by
+ * This sandbox is the built-in `VMSandbox` class, which uses
+ * Node's `vm` module. You may add and/or override sandbox variables by
  * passing the `addOrOverrideSandboxGlobals` option.
  *
  * @example
@@ -23,33 +22,44 @@ const EmberApp = require('./ember-app');
  *
  * let app = new FastBoot({
  *   distPath: 'path/to/dist',
- *   sandbox: 'path/to/sandboxClass',
- *   sandboxGlobals: {...}
+ *   buildSandboxGlobals(globals) {
+ *     return Object.assign({}, globals, {
+ *       // custom globals
+ *     });
+ *   },
  * });
  *
  * app.visit('/photos')
  *   .then(result => result.html())
  *   .then(html => res.send(html));
  */
-
 class FastBoot {
   /**
    * Create a new FastBoot instance.
+   *
    * @param {Object} options
    * @param {string} options.distPath the path to the built Ember application
    * @param {Boolean} [options.resilient=false] if true, errors during rendering won't reject the `visit()` promise but instead resolve to a {@link Result}
-   * @param {Sandbox} [options.sandbox=VMSandbox] the sandbox to use
-   * @param {Object} [options.sandboxGlobals={}] any additional sandbox variables that an app server wants to override and/or add in the sandbox
+   * @param {Function} [options.buildSandboxGlobals] a function used to build the final set of global properties setup within the sandbox
    */
-  constructor(options) {
-    options = options || {};
+  constructor(options = {}) {
+    let { distPath, buildSandboxGlobals } = options;
 
-    this.distPath = options.distPath;
-    this.sandbox = options.sandbox || require('./vm-sandbox');
-    this.sandboxGlobals = options.sandboxGlobals || {};
-    this.resilient = !!options.resilient || false;
+    this.resilient = 'resilient' in options ? Boolean(options.resilient) : false;
 
-    this._buildEmberApp(this.distPath, this.sandbox, this.sandboxGlobals);
+    this.distPath = distPath;
+
+    // deprecate the legacy path, but support it
+    if (buildSandboxGlobals === undefined && options.sandboxGlobals !== undefined) {
+      console.warn(
+        '[DEPRECATION] Instantiating `fastboot` with a `sandboxGlobals` option has been deprecated. Please migrate to specifying `buildSandboxGlobals` instead.'
+      );
+      buildSandboxGlobals = globals => Object.assign({}, globals, options.sandboxGlobals);
+    }
+
+    this.buildSandboxGlobals = buildSandboxGlobals;
+
+    this._buildEmberApp(this.distPath, this.buildSandboxGlobals);
   }
 
   /**
@@ -65,59 +75,57 @@ class FastBoot {
    * @param {Boolean} [options.shouldRender] whether the app should do rendering or not. If set to false, it puts the app in routing-only.
    * @param {Boolean} [options.disableShoebox] whether we should send the API data in the shoebox. If set to false, it will not send the API data used for rendering the app on server side in the index.html.
    * @param {Integer} [options.destroyAppInstanceInMs] whether to destroy the instance in the given number of ms. This is a failure mechanism to not wedge the Node process (See: https://github.com/ember-fastboot/fastboot/issues/90)
+   * @param {Boolean} [options.buildSandboxPerVisit=false] whether to create a new sandbox context per-visit (slows down each visit, but guarantees no prototype leakages can occur), or reuse the existing sandbox (faster per-request, but each request shares the same set of prototypes)
    * @returns {Promise<Result>} result
    */
-  visit(path, options) {
-    options = options || {};
+  async visit(path, options = {}) {
+    let resilient = 'resilient' in options ? options.resilient : this.resilient;
 
-    let resilient = options.resilient;
+    let result = await this._app.visit(path, options);
 
-    if (resilient === undefined) {
-      resilient = this.resilient;
+    if (!resilient && result.error) {
+      throw result.error;
+    } else {
+      return result;
     }
-
-    return this._app.visit(path, options)
-      .then(result => {
-        if (!resilient && result.error) {
-          throw result.error;
-        } else {
-          return result;
-        }
-      });
   }
 
-  reload(options) {
+  /**
+   * Destroy the existing Ember application instance, and recreate it from the provided dist path.
+   * This is commonly done when `dist` has been updated, and you need to prepare to serve requests
+   * with the updated assets.
+   *
+   * @param {Object} options
+   * @param {string} options.distPath the path to the built Ember application
+   */
+  reload({ distPath }) {
     if (this._app) {
       this._app.destroy();
     }
 
-    options = options || {};
-    this._buildEmberApp(options.distPath || null);
+    this._buildEmberApp(distPath);
   }
 
-  _buildEmberApp(distPath, sandbox, sandboxGlobals) {
-    distPath = distPath || this.distPath;
-    sandbox = sandbox || this.sandbox;
-    sandboxGlobals = sandboxGlobals || this.sandboxGlobals;
-
+  _buildEmberApp(distPath = this.distPath, buildSandboxGlobals = this.buildSandboxGlobals) {
     if (!distPath) {
-      throw new Error('You must instantiate FastBoot with a distPath ' +
-                      'option that contains a path to a dist directory ' +
-                      'produced by running ember fastboot:build in your Ember app:' +
-                      '\n\n' +
-                      'new FastBootServer({\n' +
-                      '  distPath: \'path/to/dist\'\n' +
-                      '});');
+      throw new Error(
+        'You must instantiate FastBoot with a distPath ' +
+          'option that contains a path to a dist directory ' +
+          'produced by running ember fastboot:build in your Ember app:' +
+          '\n\n' +
+          'new FastBootServer({\n' +
+          "  distPath: 'path/to/dist'\n" +
+          '});'
+      );
     }
 
     this.distPath = distPath;
+
     this._app = new EmberApp({
-      distPath: distPath,
-      sandbox: sandbox,
-      sandboxGlobals: sandboxGlobals
+      distPath,
+      buildSandboxGlobals,
     });
   }
-
 }
 
 module.exports = FastBoot;

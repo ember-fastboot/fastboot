@@ -1,4 +1,123 @@
+## v3.0.0 (2020-01-31)
+
+#### :boom: Breaking Change
+* [#258](https://github.com/ember-fastboot/fastboot/pull/258) Drop Node 8 support ([@rwjblue](https://github.com/rwjblue))
+
+#### :rocket: Enhancement
+* [#252](https://github.com/ember-fastboot/fastboot/pull/252) Expose option to allow a new sandbox per visit ([@rwjblue](https://github.com/rwjblue))
+
+#### :house: Internal
+* [#259](https://github.com/ember-fastboot/fastboot/pull/259) Update various dependencies to latest versions. ([@rwjblue](https://github.com/rwjblue))
+
+#### Committers: 1
+- Robert Jackson ([@rwjblue](https://github.com/rwjblue))
+
+## v3.0.0-beta.3 (2019-11-01)
+
+#### :bug: Bug Fix
+* [#250](https://github.com/ember-fastboot/fastboot/pull/250) Fix invalid syntax with deferRendering. ([@rwjblue](https://github.com/rwjblue))
+
+#### Committers: 1
+- Robert Jackson ([@rwjblue](https://github.com/rwjblue))
+
+## v3.0.0-beta.2 (2019-11-01)
+
+#### :boom: Breaking Change
+* [#247](https://github.com/ember-fastboot/fastboot/pull/247) Remove najax from default set of sandbox globals. ([@rwjblue](https://github.com/rwjblue))
+
+#### :rocket: Enhancement
+* [#245](https://github.com/ember-fastboot/fastboot/pull/245) Refactor sandboxGlobals -> buildSandboxGlobals ([@rwjblue](https://github.com/rwjblue))
+
+#### :house: Internal
+* [#248](https://github.com/ember-fastboot/fastboot/pull/248) Remove ember-source from devDependencies. ([@rwjblue](https://github.com/rwjblue))
+
+#### Committers: 1
+- Robert Jackson ([@rwjblue](https://github.com/rwjblue))
+
+## v3.0.0-beta.1 (2019-10-30)
+
+#### :boom: Breaking Change
+* [#236](https://github.com/ember-fastboot/fastboot/pull/236) Refactor to use a single sandboxed context per visit request. ([@rwjblue](https://github.com/rwjblue))
+* [#225](https://github.com/ember-fastboot/fastboot/pull/225) Drop support for Node 6, 9, and 11. ([@kiwiupover](https://github.com/kiwiupover))
+
+#### :rocket: Enhancement
+* [#229](https://github.com/ember-fastboot/fastboot/pull/229) Add `FastBoot.distPath` ([@stefanpenner](https://github.com/stefanpenner))
+
+#### :bug: Bug Fix
+* [#227](https://github.com/ember-fastboot/fastboot/pull/227) Restore allowing fallback require from working directory ([@xg-wang](https://github.com/xg-wang))
+* [#219](https://github.com/ember-fastboot/fastboot/pull/219) Fix an incorrect `debug()` call ([@CvX](https://github.com/CvX))
+
+#### :memo: Documentation
+* [#235](https://github.com/ember-fastboot/fastboot/pull/235) Document `reload` method. ([@rwjblue](https://github.com/rwjblue))
+
+#### :house: Internal
+* [#243](https://github.com/ember-fastboot/fastboot/pull/243) Add automated release setup. ([@rwjblue](https://github.com/rwjblue))
+* [#238](https://github.com/ember-fastboot/fastboot/pull/238) Add basic memory profiling script to `dev/` folder. ([@rwjblue](https://github.com/rwjblue))
+* [#237](https://github.com/ember-fastboot/fastboot/pull/237) Add dev script to make tracing easier. ([@rwjblue](https://github.com/rwjblue))
+* [#234](https://github.com/ember-fastboot/fastboot/pull/234) Remove `rsvp` dependency. ([@rwjblue](https://github.com/rwjblue))
+* [#233](https://github.com/ember-fastboot/fastboot/pull/233) Update dependencies/devDependencies to latest. ([@rwjblue](https://github.com/rwjblue))
+* [#232](https://github.com/ember-fastboot/fastboot/pull/232) Make a single `Sandbox` base class. ([@rwjblue](https://github.com/rwjblue))
+* [#231](https://github.com/ember-fastboot/fastboot/pull/231) General repo cleanup. ([@rwjblue](https://github.com/rwjblue))
+
+#### Committers: 5
+- David Laird ([@kiwiupover](https://github.com/kiwiupover))
+- Jarek Radosz ([@CvX](https://github.com/CvX))
+- Robert Jackson ([@rwjblue](https://github.com/rwjblue))
+- Stefan Penner ([@stefanpenner](https://github.com/stefanpenner))
+- Thomas Wang ([@xg-wang](https://github.com/xg-wang))
+
 # FastBoot Changelog
+
+## v2.0.0 (2018-12-10)
+
+#### :boom: Breaking Change
+* [#202](https://github.com/ember-fastboot/fastboot/pull/202) Update Node.js support matrix ([@bobisjan](https://github.com/bobisjan))
+
+#### :rocket: Enhancement
+* [#188](https://github.com/ember-fastboot/fastboot/pull/188) Update various dependencies to latest. ([@izelnakri](https://github.com/izelnakri))
+* [#206](https://github.com/ember-fastboot/fastboot/pull/206) Update minimum version of simple-dom to 1.4.0. ([@rwjblue](https://github.com/rwjblue))
+
+#### :bug: Bug Fix
+* [#200](https://github.com/ember-fastboot/fastboot/pull/200) Allow to require module path from whitelisted dependency ([@bobisjan](https://github.com/bobisjan))
+* [#201](https://github.com/ember-fastboot/fastboot/pull/201) Remove usage of deprecated exists-sync ([@SergeAstapov](https://github.com/SergeAstapov))
+
+#### :memo: Documentation
+* [#197](https://github.com/ember-fastboot/fastboot/pull/197) Fixed small typo ([@kiwiupover](https://github.com/kiwiupover))
+
+#### :house: Internal
+* [#204](https://github.com/ember-fastboot/fastboot/pull/204) fix(package): update debug to version 4.1.0 ([@rwjblue](https://github.com/rwjblue))
+* [#203](https://github.com/ember-fastboot/fastboot/pull/203) Remove .babelrc configuration file ([@bobisjan](https://github.com/bobisjan))
+
+#### Committers: 5
+- David Laird ([@kiwiupover](https://github.com/kiwiupover))
+- Izel Nakri ([@izelnakri](https://github.com/izelnakri))
+- Jan Bobisud ([@bobisjan](https://github.com/bobisjan))
+- Robert Jackson ([@rwjblue](https://github.com/rwjblue))
+- Sergey Astapov ([@SergeAstapov](https://github.com/SergeAstapov))
+
+### 1.2.0
+
+* Add support for setting attributes on the `<html>` element (e.g. `<html lang="fr">`).
+
+### 1.1.4-beta.1
+
+* Enable rehydration from glimmer-vm as opt-in
+
+### 1.1.3
+
+* Add markers before and after the body to be able to remove rootless apps
+
+### 1.1.2
+
+* Adds API to allow chunking shoebox responses for better performance.
+
+### 1.1.1
+
+* Implement `unknownProperty` in FastbootHeaders to prevent users mistakenly use `Ember.get(headers, headerName)`
+
+### 1.1.0
+
+* Add the ability to support configuration for multiple namespaces to `FastBoot.config`.
 
 ### 1.0.0-rc.3
 

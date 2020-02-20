@@ -1,17 +1,19 @@
 'use strict';
 
 const fs = require('fs');
+const vm = require('vm');
 const path = require('path');
 const chalk = require('chalk');
 
-const najax = require('najax');
 const SimpleDOM = require('simple-dom');
-const existsSync = require('exists-sync');
+const resolve = require('resolve');
 const debug = require('debug')('fastboot:ember-app');
 
+const Sandbox = require('./sandbox');
 const FastBootInfo = require('./fastboot-info');
 const Result = require('./result');
 const FastBootSchemaVersions = require('./fastboot-schema-versions');
+const getPackageName = require('./utils/get-package-name');
 
 /**
  * @private
@@ -26,57 +28,82 @@ class EmberApp {
    * Create a new EmberApp.
    * @param {Object} options
    * @param {string} options.distPath - path to the built Ember application
-   * @param {Sandbox} [options.sandbox=VMSandbox] - sandbox to use
-   * @param {Object} [options.sandboxGlobals] - sandbox variables that can be added or used for overrides in the sandbox.
+   * @param {Function} [options.buildSandboxGlobals] - the function used to build the final set of global properties accesible within the sandbox
    */
   constructor(options) {
-    let distPath = path.resolve(options.distPath);
+    this.buildSandboxGlobals = options.buildSandboxGlobals || defaultBuildSandboxGlobals;
+
+    let distPath = (this.distPath = path.resolve(options.distPath));
     let config = this.readPackageJSON(distPath);
 
-    this.appFilePaths = config.appFiles;
-    this.vendorFilePaths = config.vendorFiles;
     this.moduleWhitelist = config.moduleWhitelist;
     this.hostWhitelist = config.hostWhitelist;
-    this.appConfig = config.appConfig;
+    this.config = config.config;
+    this.appName = config.appName;
+    this.schemaVersion = config.schemaVersion;
 
     if (process.env.APP_CONFIG) {
-      this.appConfig = JSON.parse(process.env.APP_CONFIG);
+      let appConfig = JSON.parse(process.env.APP_CONFIG);
+      let appConfigKey = this.appName;
+      if (!(appConfigKey in appConfig)) {
+        this.config[appConfigKey] = appConfig;
+      }
+    }
+
+    if (process.env.ALL_CONFIG) {
+      let allConfig = JSON.parse(process.env.ALL_CONFIG);
+      this.config = allConfig;
     }
 
     this.html = fs.readFileSync(config.htmlFile, 'utf8');
 
-    this.sandbox = this.buildSandbox(distPath, options.sandbox, options.sandboxGlobals);
-    this.app = this.retrieveSandboxedApp();
+    this.sandboxRequire = this.buildWhitelistedRequire(this.moduleWhitelist, distPath);
+    let filePaths = [require.resolve('./scripts/install-source-map-support')].concat(
+      config.vendorFiles,
+      config.appFiles
+    );
+    this.scripts = buildScripts(filePaths);
+
+    // Ensure that the dist files can be evaluated and the `Ember.Application`
+    // instance created.
+    this.buildApp();
   }
 
   /**
    * @private
    *
    * Builds and initializes a new sandbox to run the Ember application in.
-   *
-   * @param {string} distPath path to the built Ember app to load
-   * @param {Sandbox} [sandboxClass=VMSandbox] sandbox class to use
-   * @param {Object} [sandboxGlobals={}] any additional variables to expose in the sandbox or override existing in the sandbox
    */
-  buildSandbox(distPath, sandboxClass, sandboxGlobals) {
-    let sandboxRequire = this.buildWhitelistedRequire(this.moduleWhitelist, distPath);
-    let config = this.appConfig;
-    function appConfig() {
-      return { default: config };
+  buildSandbox() {
+    const { distPath, buildSandboxGlobals, config, appName, sandboxRequire } = this;
+
+    function fastbootConfig(key) {
+      if (!key) {
+        // default to app key
+        key = appName;
+      }
+
+      if (config) {
+        return { default: config[key] };
+      } else {
+        return { default: undefined };
+      }
     }
 
-    // add any additional user provided variables or override the default globals in the sandbox
-    let globals = {
-      najax,
+    let defaultGlobals = {
       FastBoot: {
         require: sandboxRequire,
-        config: appConfig
-      }
+        config: fastbootConfig,
+
+        get distPath() {
+          return distPath;
+        },
+      },
     };
 
-    globals = Object.assign(globals, sandboxGlobals);
+    let globals = buildSandboxGlobals(defaultGlobals);
 
-    return new sandboxClass({ globals });
+    return new Sandbox(globals);
   }
 
   /**
@@ -95,64 +122,90 @@ class EmberApp {
    * @param {string} distPath path to the built Ember app
    */
   buildWhitelistedRequire(whitelist, distPath) {
+    let isLegacyWhitelist = this.schemaVersion < FastBootSchemaVersions.strictWhitelist;
+
     whitelist.forEach(function(whitelistedModule) {
-      debug("module whitelisted; module=%s", whitelistedModule);
+      debug('module whitelisted; module=%s', whitelistedModule);
+
+      if (isLegacyWhitelist) {
+        let packageName = getPackageName(whitelistedModule);
+
+        if (packageName !== whitelistedModule && whitelist.indexOf(packageName) === -1) {
+          console.error("Package '" + packageName + "' is required to be in the whitelist.");
+        }
+      }
     });
 
     return function(moduleName) {
-      if (whitelist.indexOf(moduleName) > -1) {
-        let nodeModulesPath = path.join(distPath, 'node_modules', moduleName);
+      let packageName = getPackageName(moduleName);
+      let isWhitelisted = whitelist.indexOf(packageName) > -1;
 
-        if (existsSync(nodeModulesPath)) {
-          return require(nodeModulesPath);
-        } else {
-          // If it's not on disk, assume it's a built-in node package
-          return require(moduleName);
+      if (isWhitelisted) {
+        try {
+          let resolvedModulePath = resolve.sync(moduleName, { basedir: distPath });
+          return require(resolvedModulePath);
+        } catch (error) {
+          if (error.code === 'MODULE_NOT_FOUND') {
+            return require(moduleName);
+          } else {
+            throw error;
+          }
         }
-      } else {
-        throw new Error("Unable to require module '" + moduleName + "' because it was not in the whitelist.");
       }
+
+      if (isLegacyWhitelist) {
+        if (whitelist.indexOf(moduleName) > -1) {
+          let nodeModulesPath = path.join(distPath, 'node_modules', moduleName);
+
+          if (fs.existsSync(nodeModulesPath)) {
+            return require(nodeModulesPath);
+          } else {
+            return require(moduleName);
+          }
+        } else {
+          throw new Error(
+            "Unable to require module '" + moduleName + "' because it was not in the whitelist."
+          );
+        }
+      }
+
+      throw new Error(
+        "Unable to require module '" +
+          moduleName +
+          "' because its package '" +
+          packageName +
+          "' was not in the whitelist."
+      );
     };
   }
 
   /**
-   * @private
-   *
-   * Loads the app and vendor files in the sandbox (Node vm).
-   *
-  */
-  loadAppFiles() {
-    let sandbox = this.sandbox;
-    let appFilePaths = this.appFilePaths;
-    let vendorFilePaths = this.vendorFilePaths;
-
-    sandbox.eval('sourceMapSupport.install(Error);');
-
-    debug("evaluating app and vendor files");
-
-    vendorFilePaths.forEach(function(vendorFilePath) {
-      debug("evaluating vendor file %s", vendorFilePath);
-      let vendorFile = fs.readFileSync(vendorFilePath, 'utf8');
-      sandbox.eval(vendorFile, vendorFilePath);
-    });
-    debug("vendor file evaluated");
-
-    appFilePaths.forEach(function(appFilePath) {
-      debug("evaluating app file %s", appFilePath);
-      let appFile = fs.readFileSync(appFilePath, 'utf8');
-      sandbox.eval(appFile, appFilePath);
-    });
-    debug("app files evaluated");
+   * Perform any cleanup that is needed
+   */
+  destroy() {
+    if (this._applicationInstance) {
+      this._applicationInstance.destroy();
+    }
   }
 
   /**
    * @private
    *
-   * Create the ember application in the sandbox.
+   * Creates a new `Application`
    *
+   * @returns {Ember.Application} instance
    */
-  createEmberApp() {
-    let sandbox = this.sandbox;
+  buildApp() {
+    let sandbox = this.buildSandbox();
+
+    debug('adding files to sandbox');
+
+    for (let script of this.scripts) {
+      debug('evaluating file %s', script);
+      sandbox.runScript(script);
+    }
+
+    debug('files evaluated');
 
     // Retrieve the application factory from within the sandbox
     let AppFactory = sandbox.run(function(ctx) {
@@ -161,57 +214,23 @@ class EmberApp {
 
     // If the application factory couldn't be found, throw an error
     if (!AppFactory || typeof AppFactory['default'] !== 'function') {
-      throw new Error('Failed to load Ember app from app.js, make sure it was built for FastBoot with the `ember fastboot:build` command.');
+      throw new Error(
+        'Failed to load Ember app from app.js, make sure it was built for FastBoot with the `ember fastboot:build` command.'
+      );
     }
+
+    debug('creating application');
 
     // Otherwise, return a new `Ember.Application` instance
-    return AppFactory['default']();
+    let app = AppFactory['default']();
+
+    return app;
   }
 
   /**
    * @private
    *
-   * Initializes the sandbox by evaluating the Ember app's JavaScript
-   * code, then retrieves the application factory from the sandbox and creates a new
-   * `Ember.Application`.
-   *
-   * @returns {Ember.Application} the Ember application from the sandbox
-   */
-  retrieveSandboxedApp() {
-    this.loadAppFiles();
-
-    return this.createEmberApp();
-  }
-
-  /**
-   * Destroys the app and its sandbox.
-   */
-  destroy() {
-    if (this.app) {
-      this.app.destroy();
-    }
-
-    this.sandbox = null;
-  }
-
-  /**
-   * @private
-   *
-   * Creates a new `ApplicationInstance` from the sandboxed `Application`.
-   *
-   * @returns {Promise<Ember.ApplicationInstance>} instance
-   */
-  buildAppInstance() {
-    return this.app.boot().then(function(app) {
-      debug('building instance');
-      return app.buildInstance();
-    });
-  }
-
-  /**
-   * @private
-   *
-   * Main funtion that creates the app instance for every `visit` request, boots
+   * Main function that creates the app instance for every `visit` request, boots
    * the app instance and then visits the given route and destroys the app instance
    * when the route is finished its render cycle.
    *
@@ -224,22 +243,37 @@ class EmberApp {
    * @param {Object} bootOptions An object containing the boot options that are used by
    *                             by ember to decide whether it needs to do rendering or not.
    * @param {Object} result
+   * @param {Boolean} buildSandboxPerVisit if true, a new sandbox will
+   *                                       **always** be created, otherwise one
+   *                                       is created for the first request
+   *                                       only
    * @return {Promise<instance>} instance
    */
-  visitRoute(path, fastbootInfo, bootOptions, result) {
-    let instance;
+  async _visit(path, fastbootInfo, bootOptions, result, buildSandboxPerVisit) {
+    let shouldBuildApp = buildSandboxPerVisit || this._applicationInstance === undefined;
 
-    return this.buildAppInstance()
-      .then(appInstance => {
-        instance = appInstance;
-        result.instance = instance;
-        registerFastBootInfo(fastbootInfo, instance);
+    let app = shouldBuildApp ? await this.buildApp() : this._applicationInstance;
 
-        return instance.boot(bootOptions);
-      })
-      .then(() => instance.visit(path, bootOptions))
-      .then(() => fastbootInfo.deferredPromise)
-      .then(() => instance);
+    if (buildSandboxPerVisit) {
+      // entangle the specific application instance to the result, so it can be
+      // destroyed when result._destroy() is called (after the visit is
+      // completed)
+      result.applicationInstance = app;
+    } else {
+      // save the created application instance so that we can clean it up when
+      // this instance of `src/ember-app.js` is destroyed (e.g. reload)
+      this._applicationInstance = app;
+    }
+    await app.boot();
+
+    let instance = await app.buildInstance();
+    result.applicationInstanceInstance = instance;
+
+    registerFastBootInfo(fastbootInfo, instance);
+
+    await instance.boot(bootOptions);
+    await instance.visit(path, bootOptions);
+    await fastbootInfo.deferredPromise;
   }
 
   /**
@@ -260,60 +294,70 @@ class EmberApp {
    * @param {Boolean} [options.shouldRender] whether the app should do rendering or not. If set to false, it puts the app in routing-only.
    * @param {Boolean} [options.disableShoebox] whether we should send the API data in the shoebox. If set to false, it will not send the API data used for rendering the app on server side in the index.html.
    * @param {Integer} [options.destroyAppInstanceInMs] whether to destroy the instance in the given number of ms. This is a failure mechanism to not wedge the Node process (See: https://github.com/ember-fastboot/fastboot/issues/90)
+   * @param {Boolean} [options.buildSandboxPerVisit] whether to create a new sandbox context per-visit, or reuse the existing sandbox
    * @param {ClientRequest}
    * @param {ClientResponse}
    * @returns {Promise<Result>} result
    */
-  visit(path, options) {
+  async visit(path, options) {
     let req = options.request;
     let res = options.response;
     let html = options.html || this.html;
     let disableShoebox = options.disableShoebox || false;
     let destroyAppInstanceInMs = parseInt(options.destroyAppInstanceInMs, 10);
 
-    let shouldRender = (options.shouldRender !== undefined) ? options.shouldRender : true;
+    let shouldRender = options.shouldRender !== undefined ? options.shouldRender : true;
     let bootOptions = buildBootOptions(shouldRender);
-    let fastbootInfo = new FastBootInfo(
-      req,
-      res,
-      { hostWhitelist: this.hostWhitelist, metadata: options.metadata }
-    );
-
-    let doc = bootOptions.document;
-
-    let result = new Result({
-      doc: doc,
-      html: html,
-      fastbootInfo: fastbootInfo
+    let fastbootInfo = new FastBootInfo(req, res, {
+      hostWhitelist: this.hostWhitelist,
+      metadata: options.metadata,
     });
 
+    let doc = bootOptions.document;
+    let result = new Result(doc, html, fastbootInfo);
+
+    // TODO: Use Promise.race here
     let destroyAppInstanceTimer;
     if (destroyAppInstanceInMs > 0) {
       // start a timer to destroy the appInstance forcefully in the given ms.
       // This is a failure mechanism so that node process doesn't get wedged if the `visit` never completes.
       destroyAppInstanceTimer = setTimeout(function() {
-        if (result._destroyAppInstance()) {
-          result.error = new Error('App instance was forcefully destroyed in ' + destroyAppInstanceInMs + 'ms');
+        if (result._destroy()) {
+          result.error = new Error(
+            'App instance was forcefully destroyed in ' + destroyAppInstanceInMs + 'ms'
+          );
         }
       }, destroyAppInstanceInMs);
     }
 
-    return this.visitRoute(path, fastbootInfo, bootOptions, result)
-      .then(() => {
-        if (!disableShoebox) {
-          // if shoebox is not disabled, then create the shoebox and send API data
-          createShoebox(doc, fastbootInfo);
-        }
-      })
-      .catch(error => result.error = error)
-      .then(() => result._finalize())
-      .finally(() => {
-        if (result._destroyAppInstance()) {
-          if (destroyAppInstanceTimer) {
-            clearTimeout(destroyAppInstanceTimer);
-          }
-        }
-      });
+    try {
+      await this._visit(
+        path,
+        fastbootInfo,
+        bootOptions,
+        result,
+        options.buildSandboxPerVisit === true
+      );
+
+      if (!disableShoebox) {
+        // if shoebox is not disabled, then create the shoebox and send API data
+        createShoebox(doc, fastbootInfo);
+      }
+
+      result._finalize();
+    } catch (error) {
+      // eslint-disable-next-line require-atomic-updates
+      result.error = error;
+    } finally {
+      // ensure we invoke `Ember.Application.destroy()` and
+      // `Ember.ApplicationInstance.destroy()`, but use `result._destroy()` so
+      // that the `result` object's internal `this.isDestroyed` flag is correct
+      result._destroy();
+
+      clearTimeout(destroyAppInstanceTimer);
+    }
+
+    return result;
   }
 
   /**
@@ -327,7 +371,9 @@ class EmberApp {
     try {
       file = fs.readFileSync(pkgPath);
     } catch (e) {
-      throw new Error(`Couldn't find ${pkgPath}. You may need to update your version of ember-cli-fastboot.`);
+      throw new Error(
+        `Couldn't find ${pkgPath}. You may need to update your version of ember-cli-fastboot.`
+      );
     }
 
     let manifest;
@@ -339,16 +385,23 @@ class EmberApp {
       manifest = pkg.fastboot.manifest;
       schemaVersion = pkg.fastboot.schemaVersion;
     } catch (e) {
-      throw new Error(`${pkgPath} was malformed or did not contain a manifest. Ensure that you have a compatible version of ember-cli-fastboot.`);
+      throw new Error(
+        `${pkgPath} was malformed or did not contain a manifest. Ensure that you have a compatible version of ember-cli-fastboot.`
+      );
     }
 
     const currentSchemaVersion = FastBootSchemaVersions.latest;
     // set schema version to 1 if not defined
     schemaVersion = schemaVersion || FastBootSchemaVersions.base;
-    debug('Current schemaVersion from `ember-cli-fastboot` is %s while latest schema version is %s', (schemaVersion, currentSchemaVersion));
-
+    debug(
+      'Current schemaVersion from `ember-cli-fastboot` is %s while latest schema version is %s',
+      schemaVersion,
+      currentSchemaVersion
+    );
     if (schemaVersion > currentSchemaVersion) {
-      let errorMsg = chalk.bold.red('An incompatible version between `ember-cli-fastboot` and `fastboot` was found. Please update the version of fastboot library that is compatible with ember-cli-fastboot.');
+      let errorMsg = chalk.bold.red(
+        'An incompatible version between `ember-cli-fastboot` and `fastboot` was found. Please update the version of fastboot library that is compatible with ember-cli-fastboot.'
+      );
       throw new Error(errorMsg);
     }
 
@@ -357,23 +410,36 @@ class EmberApp {
       manifest = this.transformManifestFiles(manifest);
     }
 
-    debug("reading array of app file paths from manifest");
-    var appFiles = manifest.appFiles.map(function(appFile) {
+    let config = pkg.fastboot.config;
+    let appName = pkg.fastboot.appName;
+    if (schemaVersion < FastBootSchemaVersions.configExtension) {
+      // read from the appConfig tree
+      if (pkg.fastboot.appConfig) {
+        appName = pkg.fastboot.appConfig.modulePrefix;
+        config = {};
+        config[appName] = pkg.fastboot.appConfig;
+      }
+    }
+
+    debug('reading array of app file paths from manifest');
+    let appFiles = manifest.appFiles.map(function(appFile) {
       return path.join(distPath, appFile);
     });
 
-    debug("reading array of vendor file paths from manifest");
-    var vendorFiles = manifest.vendorFiles.map(function(vendorFile) {
+    debug('reading array of vendor file paths from manifest');
+    let vendorFiles = manifest.vendorFiles.map(function(vendorFile) {
       return path.join(distPath, vendorFile);
     });
 
     return {
-      appFiles: appFiles,
-      vendorFiles: vendorFiles,
+      appFiles,
+      vendorFiles,
       htmlFile: path.join(distPath, manifest.htmlFile),
       moduleWhitelist: pkg.fastboot.moduleWhitelist,
       hostWhitelist: pkg.fastboot.hostWhitelist,
-      appConfig: pkg.fastboot.appConfig
+      config,
+      appName,
+      schemaVersion,
     };
   }
 
@@ -395,12 +461,14 @@ class EmberApp {
 function buildBootOptions(shouldRender) {
   let doc = new SimpleDOM.Document();
   let rootElement = doc.body;
+  let _renderMode = process.env.EXPERIMENTAL_RENDER_MODE_SERIALIZE ? 'serialize' : undefined;
 
   return {
     isBrowser: false,
     document: doc,
     rootElement,
-    shouldRender
+    shouldRender,
+    _renderMode,
   };
 }
 
@@ -416,10 +484,14 @@ const hasOwnProperty = Object.prototype.hasOwnProperty; // jshint ignore:line
 
 function createShoebox(doc, fastbootInfo) {
   let shoebox = fastbootInfo.shoebox;
-  if (!shoebox) { return; }
+  if (!shoebox) {
+    return;
+  }
 
   for (let key in shoebox) {
-    if (!hasOwnProperty.call(shoebox, key)) { continue; } // TODO: remove this later #144, ember-fastboot/ember-cli-fastboot/pull/417
+    if (!hasOwnProperty.call(shoebox, key)) {
+      continue;
+    } // TODO: remove this later #144, ember-fastboot/ember-cli-fastboot/pull/417
     let value = shoebox[key];
     let textValue = JSON.stringify(value);
     textValue = escapeJSONString(textValue);
@@ -439,7 +511,7 @@ const JSON_ESCAPE = {
   '>': '\\u003e',
   '<': '\\u003c',
   '\u2028': '\\u2028',
-  '\u2029': '\\u2029'
+  '\u2029': '\\u2029',
 };
 
 const JSON_ESCAPE_REGEXP = /[\u2028\u2029&><]/g;
@@ -456,6 +528,18 @@ function escapeJSONString(string) {
  */
 function registerFastBootInfo(info, instance) {
   info.register(instance);
+}
+
+function buildScripts(filePaths) {
+  return filePaths.filter(Boolean).map(filePath => {
+    let source = fs.readFileSync(filePath, { encoding: 'utf8' });
+
+    return new vm.Script(source, { filename: filePath });
+  });
+}
+
+function defaultBuildSandboxGlobals(defaultGlobals) {
+  return defaultGlobals;
 }
 
 module.exports = EmberApp;

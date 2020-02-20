@@ -1,5 +1,6 @@
+.eslintcache
 /node_modules
 npm-debug.log
 tmp*
 dist/
-yarn.lock
+/snapshots
