@@ -45,7 +45,7 @@
     "lerna-changelog": "^1.0.0",
     "mocha": "^7.0.1",
     "prettier": "^1.19.1",
-    "release-it": "^12.4.3",
+    "release-it": "^13.0.0",
     "release-it-lerna-changelog": "^1.0.3",
     "rimraf": "^3.0.1",
     "temp": "^0.9.1"
