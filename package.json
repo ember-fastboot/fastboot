@@ -1,6 +1,6 @@
 {
   "name": "fastboot",
-  "version": "3.0.0",
+  "version": "3.0.2",
   "description": "Library for rendering Ember apps in node.js",
   "keywords": [
     "ember",
@@ -46,7 +46,7 @@
     "mocha": "^7.0.1",
     "prettier": "^1.19.1",
     "release-it": "^12.4.3",
-    "release-it-lerna-changelog": "^1.0.3",
+    "release-it-lerna-changelog": "^2.0.0",
     "rimraf": "^3.0.1",
     "temp": "^0.9.1"
   },
