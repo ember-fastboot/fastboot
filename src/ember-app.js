@@ -15,6 +15,7 @@ const Result = require('./result');
 const FastBootSchemaVersions = require('./fastboot-schema-versions');
 const getPackageName = require('./utils/get-package-name');
 const Queue = require('./utils/queue');
+const sourceMapSupportScriptPath = require.resolve('./scripts/install-source-map-support');
 
 /**
  * @private
@@ -60,7 +61,7 @@ class EmberApp {
     this.html = fs.readFileSync(config.htmlFile, 'utf8');
 
     this.sandboxRequire = this.buildWhitelistedRequire(this.moduleWhitelist, distPath);
-    let filePaths = [require.resolve('./scripts/install-source-map-support')].concat(
+    let filePaths = [sourceMapSupportScriptPath].concat(
       config.vendorFiles,
       config.appFiles
     );
