@@ -188,8 +188,11 @@ class EmberApp {
    *
    * @returns {Object}
    */
-  getAppInstanceInfo(appInstance, isAppInstancePreBuilt = true) {
-    return { app: appInstance, isSandboxPreBuilt: isAppInstancePreBuilt };
+  getAppInstanceInfo(
+    appInstance,
+    appAnalytics = { isAppInstancePreBuilt: true, appInstanceRetrievalTime: 0 }
+  ) {
+    return { app: appInstance, appAnalytics };
   }
 
   /**
@@ -205,10 +208,14 @@ class EmberApp {
    *                                       only
    */
   async getNewApplicationInstance() {
+    const appInstanceRetrievalStartTime = Date.now();
     const queueObject = this._sandboxApplicationInstanceQueue.dequeue();
     const app = await queueObject.item;
 
-    return this.getAppInstanceInfo(app, queueObject.isItemPreBuilt);
+    return this.getAppInstanceInfo(app, {
+      isAppInstancePreBuilt: queueObject.isItemPreBuilt,
+      appInstanceRetrievalTime: Date.now() - appInstanceRetrievalStartTime,
+    });
   }
 
   /**
@@ -236,10 +243,11 @@ class EmberApp {
   async _visit(path, fastbootInfo, bootOptions, result, buildSandboxPerVisit) {
     let shouldBuildApp = buildSandboxPerVisit || this._applicationInstance === undefined;
 
-    let { app, isSandboxPreBuilt } = shouldBuildApp
+    let { app, appAnalytics } = shouldBuildApp
       ? await this.getNewApplicationInstance()
       : this.getAppInstanceInfo(this._applicationInstance);
 
+    result.analytics.appInstanceRetrievalTime = appAnalytics.appInstanceRetrievalTime;
     if (buildSandboxPerVisit) {
       // entangle the specific application instance to the result, so it can be
       // destroyed when result._destroy() is called (after the visit is
@@ -248,7 +256,7 @@ class EmberApp {
 
       // we add analytics information about the current request to know
       // whether it used sandbox from the pre-built queue or built on demand.
-      result.analytics.usedPrebuiltSandbox = isSandboxPreBuilt;
+      result.analytics.usedPrebuiltSandbox = appAnalytics.isAppInstancePreBuilt;
     } else {
       // save the created application instance so that we can clean it up when
       // this instance of `src/ember-app.js` is destroyed (e.g. reload)
@@ -262,7 +270,11 @@ class EmberApp {
     registerFastBootInfo(fastbootInfo, instance);
 
     await instance.boot(bootOptions);
+
+    const instanceVisitStartTime = Date.now();
     await instance.visit(path, bootOptions);
+    result.analytics.instanceVisitTime = Date.now() - instanceVisitStartTime;
+
     await fastbootInfo.deferredPromise;
   }
 
@@ -290,6 +302,7 @@ class EmberApp {
    * @returns {Promise<Result>} result
    */
   async visit(path, options) {
+    let fastbootVisitStartTime = Date.now();
     let req = options.request;
     let res = options.response;
     let html = options.html || this.html;
@@ -323,6 +336,7 @@ class EmberApp {
 
     try {
       await this._visit(path, fastbootInfo, bootOptions, result, buildSandboxPerVisit);
+      result.analytics.fastbootVisitTime = Date.now() - fastbootVisitStartTime;
 
       if (!disableShoebox) {
         // if shoebox is not disabled, then create the shoebox and send API data
