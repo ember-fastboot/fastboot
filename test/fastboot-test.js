@@ -444,27 +444,21 @@ describe('FastBoot', function() {
     let html = await result.html();
 
     expect(html).to.match(/Items: 1/);
-    expect(analytics).to.be.deep.equals({
-      usedPrebuiltSandbox: true,
-    });
+    expect(analytics.usedPrebuiltSandbox).to.equal(true);
 
     result = await fastboot.visit('/', { buildSandboxPerVisit: true });
     analytics = result.analytics;
     html = await result.html();
 
     expect(html).to.match(/Items: 1/);
-    expect(analytics).to.be.deep.equals({
-      usedPrebuiltSandbox: true,
-    });
+    expect(analytics.usedPrebuiltSandbox).to.equal(true);
 
     result = await fastboot.visit('/', { buildSandboxPerVisit: true });
     analytics = result.analytics;
     html = await result.html();
 
     expect(html).to.match(/Items: 1/);
-    expect(analytics).to.be.deep.equals({
-      usedPrebuiltSandbox: true,
-    });
+    expect(analytics.usedPrebuiltSandbox).to.equal(true);
   });
 
   it('errors can be properly attributed with buildSandboxPerVisit=true', async function() {
@@ -527,21 +521,15 @@ describe('FastBoot', function() {
 
     let result = await first;
     let analytics = result.analytics;
-    expect(analytics).to.be.deep.equals({
-      usedPrebuiltSandbox: true,
-    });
+    expect(analytics.usedPrebuiltSandbox).to.equal(true);
 
     result = await second;
     analytics = result.analytics;
-    expect(analytics).to.be.deep.equals({
-      usedPrebuiltSandbox: true,
-    });
+    expect(analytics.usedPrebuiltSandbox).to.equal(true);
 
     result = await third;
     analytics = result.analytics;
-    expect(analytics).to.be.deep.equals({
-      usedPrebuiltSandbox: false,
-    });
+    expect(analytics.usedPrebuiltSandbox).to.equal(false);
   });
 
   it('it leverages sandbox from queue when present', async function() {
@@ -569,21 +557,38 @@ describe('FastBoot', function() {
 
     let result = await first;
     let analytics = result.analytics;
-    expect(analytics).to.be.deep.equals({
-      usedPrebuiltSandbox: true,
-    });
+    expect(analytics.usedPrebuiltSandbox).to.equal(true);
 
     result = await second;
     analytics = result.analytics;
-    expect(analytics).to.be.deep.equals({
-      usedPrebuiltSandbox: true,
-    });
+    expect(analytics.usedPrebuiltSandbox).to.equal(true);
 
     result = await third;
     analytics = result.analytics;
-    expect(analytics).to.be.deep.equals({
-      usedPrebuiltSandbox: true,
+    expect(analytics.usedPrebuiltSandbox).to.equal(true);
+  });
+
+  it('should contain the analytics data for the visit', async function() {
+    this.timeout(3000);
+
+    var fastboot = new FastBoot({
+      distPath: fixture('app-with-prototype-mutations'),
     });
+
+    let resultWithSandboxPerVisit = await fastboot.visit('/', { buildSandboxPerVisit: true });
+    expect(Object.keys(resultWithSandboxPerVisit.analytics)).to.deep.equals([
+      'appInstanceRetrievalTime',
+      'usedPrebuiltSandbox',
+      'instanceVisitTime',
+      'fastbootVisitTime',
+    ]);
+
+    let resultWithoutSandboxPerVisit = await fastboot.visit('/');
+    expect(Object.keys(resultWithoutSandboxPerVisit.analytics)).to.deep.equals([
+      'appInstanceRetrievalTime',
+      'instanceVisitTime',
+      'fastbootVisitTime',
+    ]);
   });
 
   it('htmlEntrypoint works', function() {
